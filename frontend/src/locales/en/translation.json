@@ -1,0 +1,34 @@
+{
+  "login": {
+    "title": "Sign in",
+    "description": "Enter your credentials to access your account",
+    "email": "Email",
+    "password": "Password",
+    "submitting": "Signing in…",
+    "submit": "Sign in",
+    "error": "Login failed"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "email": "Email",
+    "role": "Role",
+    "signOut": "Sign out"
+  },
+  "languageSwitcher": {
+    "english": "English",
+    "khmer": "Khmer"
+  },
+  "sidebar": {
+    "analytics": "Analytics",
+    "dashboard": "Dashboard",
+    "report": "Report",
+    "sales": "Sales",
+    "order": "Order",
+    "product": "Product",
+    "customer": "Customer",
+    "team": "Team",
+    "setting": "Setting",
+    "profile": "Profile"
+  }
+}

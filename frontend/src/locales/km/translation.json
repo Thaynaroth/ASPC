@@ -1,0 +1,34 @@
+{
+  "login": {
+    "title": "ចូលប្រើ",
+    "description": "បញ្ចូលព័ត៌មានគណនីរបស់អ្នកដើម្បីចូលប្រើ",
+    "email": "អ៊ីមែល",
+    "password": "ពាក្យសម្ងាត់",
+    "submitting": "កំពុងចូល...",
+    "submit": "ចូលប្រើ",
+    "error": "ការចូលប្រើបរាជ័យ"
+  },
+  "dashboard": {
+    "title": "ផ្ទាំងគ្រប់គ្រង",
+    "welcome": "ស្វាគមន៍មកវិញ",
+    "email": "អ៊ីមែល",
+    "role": "តួនាទី",
+    "signOut": "ចាកចេញ"
+  },
+  "languageSwitcher": {
+    "english": "អង់គ្លេស",
+    "khmer": "ខ្មែរ"
+  },
+  "sidebar": {
+    "analytics": "វិភាគទាន",
+    "dashboard": "ផ្ទាំងគ្រប់គ្រង",
+    "report": "របាយការណ៍",
+    "sales": "ការលក់",
+    "order": "បញ្ជាទិញ",
+    "product": "ផលិតផល",
+    "customer": "អតិថិជន",
+    "team": "ក្រុម",
+    "setting": "ការកំណត់",
+    "profile": "ប្រវត្តិរូប"
+  }
+}
