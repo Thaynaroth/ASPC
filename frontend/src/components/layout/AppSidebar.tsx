@@ -1,7 +1,8 @@
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { Menu } from '@base-ui/react/menu';
 import {
   BarChart3,
   FileText,
@@ -11,6 +12,7 @@ import {
   UserCog,
   Settings,
   User,
+  MoreVertical,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -45,12 +47,12 @@ const sections: SidebarSection[] = [
 
 const bottomItems: SidebarItem[] = [
   { labelKey: 'sidebar.setting', path: 'setting', icon: Settings },
-  { labelKey: 'sidebar.profile', path: 'profile', icon: User },
 ];
 
 export default function AppSidebar() {
   const { t } = useTranslation();
   const { lang } = useParams<{ lang: string }>();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -64,9 +66,9 @@ export default function AppSidebar() {
   const sectionLabelClass = 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground';
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r bg-card">
+    <aside className="flex h-full w-60 flex-col rounded-xl bg-white">
       {/* Logo */}
-      <div className="flex items-center gap-2 border-b px-5 py-4">
+      <div className="flex items-center gap-2 px-5 py-4">
         <div className="flex flex-col">
           <span className="text-lg font-bold leading-tight">ASPC</span>
           <span className="text-[10px] leading-tight text-muted-foreground">
@@ -97,7 +99,7 @@ export default function AppSidebar() {
       </nav>
 
       {/* Bottom items */}
-      <div className="border-t px-3 py-3">
+      <div className="px-3 py-3">
         <div className="space-y-0.5">
           {bottomItems.map((item) => (
             <NavLink
@@ -111,8 +113,8 @@ export default function AppSidebar() {
           ))}
         </div>
 
-        {/* User info + logout */}
-        <div className="mt-3 flex items-center gap-3 border-t pt-3">
+        {/* User info + menu */}
+        <div className="mt-3 flex items-center gap-3 pt-3">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
             {(user?.full_name || user?.email || '?')[0].toUpperCase()}
           </div>
@@ -124,12 +126,31 @@ export default function AppSidebar() {
               {user?.roles?.join(', ') || '---'}
             </p>
           </div>
-          <button
-            onClick={logout}
-            className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {t('dashboard.signOut')}
-          </button>
+          <Menu.Root>
+            <Menu.Trigger className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none">
+              <MoreVertical className="size-4" />
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner className="outline-none" sideOffset={4}>
+                <Menu.Popup className="min-w-40 origin-[var(--transform-origin)] rounded-lg border bg-popover p-1 text-sm text-popover-foreground shadow-lg outline-none">
+                  <Menu.Item
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted hover:text-foreground outline-none"
+                    onClick={() => navigate(`/${lang}/profile`)}
+                  >
+                    <User className="size-4" />
+                    {t('sidebar.profile')}
+                  </Menu.Item>
+                  <Menu.Item
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-destructive transition-colors hover:bg-destructive/10 outline-none"
+                    onClick={logout}
+                  >
+                    <span className="flex size-4 items-center justify-center" />
+                    {t('dashboard.signOut')}
+                  </Menu.Item>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
         </div>
       </div>
     </aside>
