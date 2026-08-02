@@ -1,10 +1,3 @@
-Here is a complete, production-ready ruleset tailored precisely to your chosen tech stack (**Vite + React + ShadCN** frontend, **Fastify + Prisma + Socket.io** backend).
-
-You can copy and paste this text directly into your `agent.md`, `.cursorrules`, or custom instructions file. It translates the visual folder structure you provided into strict, actionable engineering guardrails for your AI agent.
-
----
-
-```markdown
 # AI Agent Rules: ASPC Project Structure & Coding Standards
 
 You are an expert full-stack engineer building the ASPC (Automation Selling Platform in Cambodia). You must strictly follow this folder architecture, file layout, and engineering workflow. Do not deviate from these paths or patterns unless explicitly instructed.
@@ -79,5 +72,46 @@ my-project/
 * **Defensive Error Handling:** Wrap all third-party external integrations (such as Telegram API requests and OpenAI token exchanges) within strict, comprehensive `try / catch` blocks. Log all operational errors explicitly using the built-in Fastify telemetry layers.
 * **Phonetic Language Processing Context:** When generating natural language parsers or setting up system prompts, explicitly account for casual, unspaced Khmer script structures and phonetic Khmerlish phrases (e.g., "orkun", "sl mtl", "bos bon"). Use structured JSON outputs from your AI processing engines to ensure consistent structural parsing.
 * **Secret Tracking Security:** Never write hardcoded keys, bot tokens, or database credential strings directly inside code files. Read configuration details dynamically from environment variables using a system-level `.env` profile. Add `.env` to your global ignore listings right away.
+
+---
+
+## 5. Frontend Design System: "Sketchbook" Hand-Drawn Style (MANDATORY)
+
+The ASPC frontend uses a cohesive hand-drawn / sketch-on-paper design language. Every new UI must follow this system — do not introduce flat, corporate, or "shadcn default" styling.
+
+### 5.1 Design Tokens (defined in `frontend/src/index.css` — never hardcode raw colors in components)
+
+* **Palette:** Warm paper tones. Use the theme variables (`bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, ...) — they map to warm cream paper, paper-white cards, warm brown ink, and tan accents. Both `:root` (light) and `.dark` (warm dark paper) variants exist and must stay in sync.
+* **Do NOT** reintroduce cold colors (indigo, zinc, gray, blue) for the brand; the accent is warm brown ink. Colorful pastel tints (sky/violet/emerald/etc.) are allowed only for small icon tiles / status accents, as in `Dashboard.tsx`.
+* **Radius:** use the theme radius (cards `rounded-xl`, inputs/buttons `rounded-lg`). Do not use sharp `rounded-none` or oversized radii.
+
+### 5.2 Typography
+
+* `font-hand` (Kalam) — handwritten font. Use ONLY for: brand wordmark (sidebar "ASPC", login panel), page-level titles / big greetings (dashboard h1, placeholder titles, login headline), and decorative headings. Never use it for body text, labels, buttons, or table content.
+* `font-sans` (Nunito) — default body font. Body copy, buttons, inputs, sidebar items, table text.
+* Always keep `"Noto Sans Khmer"` in font stacks for Khmer (km) locale support.
+* Titles should use `font-bold` + `tracking-tight` with `font-hand`; reserve large sizes (text-2xl+) for hand titles.
+
+### 5.3 Paper Texture & Icon Wobble (global, do not remove)
+
+* `body` in `index.css` carries the paper-grain background image (SVG noise data-URI). Never set a flat solid `background` on page-level containers that hides it.
+* `svg.lucide` has `filter: url(#hand-rough)` — a turbulence displacement filter defined in a hidden `<svg>` in `index.html`. Every lucide icon renders slightly wobbly (hand-inked). Never override `filter` on lucide icons except to add transforms.
+* When creating new icons/SVGs for the brand, use the same rough-stroke technique (displacement filter or double draft strokes) — never crisp geometric strokes.
+
+### 5.4 Borders & Surfaces
+
+* Cards (`components/ui/card.tsx`) use `border-2 border-dashed` (pen-stroke outline) + `shadow-sm`. Never replace with solid `ring-*` borders on cards.
+* Inputs and outline buttons are also dashed (`border-2 border-dashed`). Default buttons stay solid ink (`bg-primary`) like a marker stroke.
+* Quick-access / tile cards may alternate a slight tilt (`-rotate-1` / `rotate-1`) for a sticky-note feel, as in `Dashboard.tsx`.
+
+
+### 5.6 Implementation Checklist for New Screens
+
+1. Page container: `bg-background` (paper shows through) — do not paint over it.
+2. Cards: use the `Card` primitives (inherit dashed border + shadow). For custom tiles, copy the dashed style from Dashboard quick-access cards.
+3. Titles: `font-hand text-2xl/3xl font-bold tracking-tight`; body text `font-sans text-sm`.
+4. Icons: lucide only (auto-wobble). Color icon tiles with pastel tint + `ring-1` like Dashboard modules.
+5. Respect dark mode: use theme tokens only, verify both palettes.
+6. No flat white panels, no solid gray, no ring-styled cards, no Inter/Roboto fonts.
 
 ```

@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Logo from '@/components/common/Logo';
 import { Bot, ShoppingCart, LineChart } from 'lucide-react';
 
 const features = [
@@ -55,48 +55,34 @@ export default function Login() {
   return (
     <div className="flex min-h-dvh">
       {/* Left side - brand showcase */}
-      <div className="relative hidden w-2/3 flex-col justify-center overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-950 p-12 lg:flex">
+      <div className="relative hidden w-2/3 flex-col justify-center overflow-hidden bg-gradient-to-br from-amber-700 via-amber-800 to-stone-950 p-12 lg:flex">
         <div
-          className="absolute inset-0 opacity-[0.07]"
+          className="absolute inset-0 opacity-[0.06]"
           style={{
             backgroundImage:
               'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
             backgroundSize: '48px 48px',
           }}
         />
-        <div className="absolute -top-24 -right-24 size-96 rounded-full bg-indigo-400/20 blur-3xl" />
-        <div className="absolute -bottom-32 -left-16 size-96 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        <div className="absolute -top-24 -right-24 size-96 rounded-full bg-amber-400/20 blur-3xl" />
+        <div className="absolute -bottom-32 -left-16 size-96 rounded-full bg-orange-500/10 blur-3xl" />
 
         <div className="relative z-10 max-w-md space-y-10">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/25 backdrop-blur">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-7"
-                aria-hidden="true"
-              >
-                <path d="M12 4 4.5 20h3.1L9 16.5h6l1.4 3.5h3.1L12 4Z" />
-                <path d="M10.2 13h3.6L12 8.5 10.2 13Z" />
-              </svg>
-            </div>
+            <Logo className="size-11" />
             <div>
-              <p className="text-xl font-extrabold tracking-tight text-white">ASPC</p>
-              <p className="text-xs font-medium tracking-wide text-indigo-200">
+              <p className="font-hand text-2xl font-bold tracking-tight text-white">ASPC</p>
+              <p className="text-xs font-medium tracking-wide text-amber-200">
                 Automation Selling Platform
               </p>
             </div>
           </div>
 
           <div className="space-y-3">
-            <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-white">
+            <h1 className="font-hand text-4xl leading-snug font-bold text-white">
               Sell smarter,<br />automated end to end.
             </h1>
-            <p className="text-base leading-relaxed text-indigo-200">
+            <p className="text-base leading-relaxed text-amber-100/80">
               Everything you need to run your online store — AI agents, orders,
               promotions and analytics — in one platform.
             </p>
@@ -110,7 +96,7 @@ export default function Login() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">{feature.title}</p>
-                  <p className="text-sm text-indigo-200">{feature.description}</p>
+                  <p className="text-sm text-amber-100/80">{feature.description}</p>
                 </div>
               </li>
             ))}
@@ -119,11 +105,7 @@ export default function Login() {
       </div>
 
       {/* Right side - form */}
-      <div className="relative flex w-full items-center justify-center p-4 lg:w-1/3">
-        <div className="absolute top-4 right-4">
-          <LanguageSwitcher />
-        </div>
-
+      <div className="flex w-full flex-col items-center justify-center p-4 py-6 lg:w-1/3">
         <Card className="w-full max-w-sm shadow-xl">
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -166,7 +148,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="w-full cursor-pointer"
+                className="w-full cursor-pointer py-4 text-base font-semibold"
                 disabled={submitting}
               >
                 {submitting ? t('login.submitting') : t('login.submit')}
@@ -174,6 +156,23 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
+
+        <div className="mt-3 w-full max-w-sm space-y-1">
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full cursor-pointer text-sm text-muted-foreground"
+          >
+            {t('login.forgotPassword')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-16 w-full cursor-pointer border-primary/40 py-4 text-base font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
+          >
+            {t('login.createAccount')}
+          </Button>
+        </div>
       </div>
     </div>
   );

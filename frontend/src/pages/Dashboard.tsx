@@ -39,7 +39,7 @@ export default function Dashboard() {
     <div className="flex h-full flex-col gap-6 overflow-y-auto p-6">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight">
+          <h1 className="font-hand text-3xl leading-snug font-bold tracking-tight">
             {t('dashboard.welcome')}
             {user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''} 👋
           </h1>
@@ -63,11 +63,13 @@ export default function Dashboard() {
           {t('dashboard.quickAccess')}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {modules.map((module) => (
+          {modules.map((module, index) => (
             <button
               key={module.key}
               onClick={() => navigate(`/${lang}/${module.key}`)}
-              className="group flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              className={`group flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                index % 2 === 0 ? '-rotate-1' : 'rotate-1'
+              }`}
             >
               <div
                 className={`flex size-11 shrink-0 items-center justify-center rounded-lg ring-1 ${module.tile}`}

@@ -6,7 +6,9 @@
     "password": "Password",
     "submitting": "Signing in…",
     "submit": "Sign in",
-    "error": "Login failed"
+    "error": "Login failed",
+    "forgotPassword": "Forgot password?",
+    "createAccount": "Create new account"
   },
   "dashboard": {
     "title": "Dashboard",

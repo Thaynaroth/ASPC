@@ -74,12 +74,12 @@ export default function AppSidebar() {
   const sectionLabelClass = 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground';
 
   return (
-    <aside className="flex h-full w-60 flex-col rounded-xl border bg-card">
+    <aside className="flex h-full w-60 flex-col rounded-xl border-2 border-dashed bg-card">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
         <Logo />
         <div className="flex flex-col">
-          <span className="text-base leading-tight font-extrabold tracking-tight">ASPC</span>
+          <span className="font-hand text-xl leading-tight font-bold tracking-tight">ASPC</span>
           <span className="text-[10px] leading-tight font-medium text-muted-foreground">
             Automation Selling Platform
           </span>
