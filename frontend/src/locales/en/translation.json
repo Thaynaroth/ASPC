@@ -13,22 +13,31 @@
     "welcome": "Welcome back",
     "email": "Email",
     "role": "Role",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "quickAccess": "Quick access",
+    "comingSoon": "Coming soon"
   },
   "languageSwitcher": {
     "english": "English",
     "khmer": "Khmer"
   },
+  "placeholder": {
+    "comingSoon": "This page is coming soon."
+  },
   "sidebar": {
     "analytics": "Analytics",
     "dashboard": "Dashboard",
     "report": "Report",
+    "agent": "Agent",
     "sales": "Sales",
+    "chat": "Chat",
     "order": "Order",
+    "promotion": "Promotion",
     "product": "Product",
+    "category": "Category",
     "customer": "Customer",
-    "team": "Team",
     "setting": "Setting",
-    "profile": "Profile"
+    "profile": "Profile",
+    "theme": "Theme"
   }
 }

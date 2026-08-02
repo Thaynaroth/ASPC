@@ -5,6 +5,7 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
 import Login from '@/pages/Login';
+import Dashboard from '@/pages/Dashboard';
 import PlaceholderPage from '@/pages/PlaceholderPage';
 
 function GuestRoute({ children }: { children: ReactNode }) {
@@ -40,12 +41,17 @@ export default function App() {
               }
             >
               <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<PlaceholderPage title="Dashboard" />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="report" element={<PlaceholderPage title="Report" />} />
+              <Route path="agent" element={<PlaceholderPage title="Agent" />} />
+              <Route path="chat" element={<PlaceholderPage title="Chat" />} />
               <Route path="order" element={<PlaceholderPage title="Order" />} />
+              <Route path="promotion" element={<PlaceholderPage title="Promotion" />} />
               <Route path="product" element={<PlaceholderPage title="Product" />} />
+              <Route path="category" element={<PlaceholderPage title="Category" />} />
               <Route path="customer" element={<PlaceholderPage title="Customer" />} />
-              <Route path="team" element={<PlaceholderPage title="Team" />} />
+              <Route path="shop" element={<PlaceholderPage title="Shop" />} />
+              <Route path="user" element={<PlaceholderPage title="User" />} />
               <Route path="setting" element={<PlaceholderPage title="Setting" />} />
               <Route path="profile" element={<PlaceholderPage title="Profile" />} />
             </Route>

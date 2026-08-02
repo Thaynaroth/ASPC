@@ -13,22 +13,31 @@
     "welcome": "ស្វាគមន៍មកវិញ",
     "email": "អ៊ីមែល",
     "role": "តួនាទី",
-    "signOut": "ចាកចេញ"
+    "signOut": "ចាកចេញ",
+    "quickAccess": "ការចូលប្រើរហ័ស",
+    "comingSoon": "មកដល់ឆាប់ៗ"
   },
   "languageSwitcher": {
     "english": "អង់គ្លេស",
     "khmer": "ខ្មែរ"
   },
+  "placeholder": {
+    "comingSoon": "ទំព័រនេះមកដល់ឆាប់ៗនេះ។"
+  },
   "sidebar": {
     "analytics": "វិភាគទាន",
     "dashboard": "ផ្ទាំងគ្រប់គ្រង",
     "report": "របាយការណ៍",
+    "agent": "ភ្នាក់ងារ",
     "sales": "ការលក់",
+    "chat": "ការជជែក",
     "order": "បញ្ជាទិញ",
+    "promotion": "ការផ្សព្វផ្សាយ",
     "product": "ផលិតផល",
+    "category": "ប្រភេទ",
     "customer": "អតិថិជន",
-    "team": "ក្រុម",
     "setting": "ការកំណត់",
-    "profile": "ប្រវត្តិរូប"
+    "profile": "ប្រវត្តិរូប",
+    "theme": "ប្រធានបទ"
   }
 }
