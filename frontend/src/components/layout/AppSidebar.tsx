@@ -20,6 +20,7 @@ import {
   ChevronUp,
   Sun,
   Moon,
+  Store,
 } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -85,6 +86,25 @@ export default function AppSidebar() {
           </span>
         </div>
       </div>
+
+      {/* Current shop (non-superadmin users) */}
+      {user?.shops && user.shops.length > 0 && (
+        <div className="px-3 pb-2">
+          <div className="flex items-center gap-2.5 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-3 py-2">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400">
+              <Store className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold leading-tight">
+                {user.shops[0].name}
+              </p>
+              <p className="truncate text-[10px] leading-tight text-muted-foreground">
+                {user.shops[0].role}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">

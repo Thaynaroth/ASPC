@@ -1,5 +1,12 @@
 const BASE_URL = '/api';
 
+export interface UserShop {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -9,6 +16,7 @@ export interface User {
   is_verified: boolean;
   created_at: string;
   roles: string[];
+  shops: UserShop[];
 }
 
 export interface ApiError {

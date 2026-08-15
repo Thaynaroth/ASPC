@@ -2,6 +2,23 @@ import bcrypt from 'bcrypt';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import prisma from '../utils/prisma';
 
+async function getUserShops(userId: string) {
+  const memberships = await prisma.user_roles.findMany({
+    where: { user_id: userId, shop_id: { not: null } },
+    include: {
+      shop: { select: { id: true, name: true, slug: true } },
+      role: { select: { name: true } },
+    },
+  });
+
+  return memberships.map((m) => ({
+    id: m.shop!.id,
+    name: m.shop!.name,
+    slug: m.shop!.slug,
+    role: m.role.name,
+  }));
+}
+
 export async function login(
   request: FastifyRequest<{ Body: { email: string; password: string } }>,
   reply: FastifyReply,
@@ -44,6 +61,7 @@ export async function login(
       full_name: user.full_name,
       phone: user.phone,
       avatar_url: user.avatar_url,
+      shops: await getUserShops(user.id),
     },
   };
 }
@@ -86,6 +104,7 @@ export async function me(request: FastifyRequest, reply: FastifyReply) {
     user: {
       ...user,
       roles: roles.map((r) => r.role.name),
+      shops: await getUserShops(user.id),
     },
   };
 }
