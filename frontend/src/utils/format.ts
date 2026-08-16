@@ -54,3 +54,21 @@ export function parseQtySyntax(input: string): { name: string; quantity: number 
 
   return { name: trimmed, quantity: 1 };
 }
+
+// Khmer phone display format: 0xx xxx xxx (…), digits only, leading +855 dropped.
+export function formatKhmerPhone(raw: string): string {
+  let digits = (raw ?? '').replace(/\D/g, '');
+  if (digits.startsWith('855')) digits = digits.slice(3);
+  if (digits && !digits.startsWith('0') && digits.length === 9) digits = '0' + digits;
+  digits = digits.slice(0, 15);
+  if (!digits) return '';
+  const first = digits.slice(0, 3);
+  const second = digits.slice(3, 6);
+  const third = digits.slice(6, 9);
+  const rest = digits.slice(9);
+  return [first, second, third, rest].filter(Boolean).join(' ');
+}
+
+export function digitsOnlyPhone(raw: string): string {
+  return (raw ?? '').replace(/\D/g, '');
+}

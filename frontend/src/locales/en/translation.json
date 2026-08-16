@@ -59,10 +59,10 @@
   },
   "order": {
     "title": "Orders",
-    "newInvoiceTab": "New invoice",
+    "newInvoiceTab": "New order",
     "listTab": "Order list",
-    "invoice": "Invoice",
-    "invoiceNo": "No.",
+    "invoice": "Order",
+    "invoiceNo": "Order no.",
     "date": "Date",
     "customer": "Customer",
     "customerName": "Customer name",
@@ -78,7 +78,7 @@
     "deliveryFee": "Delivery fee",
     "total": "Total",
     "amountDue": "Amount due",
-    "placeOrder": "Place order",
+    "placeOrder": "Create order",
     "addItemPlaceholder": "Type a product… e.g. coca x2",
     "newProductHint": "New product — will be saved",
     "knownProduct": "Known product",
@@ -89,12 +89,12 @@
     "allStatuses": "All",
     "loadMore": "Load more",
     "emptyList": "No orders found",
-    "emptyListHint": "When you place an invoice, it shows up here.",
+    "emptyListHint": "When you place an order, it shows up here.",
     "repeatLast": "Repeat last order",
     "clearAll": "Clear",
     "placed": "Order placed!",
     "placedNewProducts": "New products were saved for next time",
-    "newInvoiceBtn": "New invoice",
+    "newInvoiceBtn": "New order",
     "markPaid": "Mark as paid",
     "cancelOrder": "Cancel order",
     "cancelReasonPlaceholder": "Why was it cancelled? (optional)",
@@ -119,7 +119,13 @@
     "advanceDelivered": "Mark delivered",
     "cancelReasonLabel": "Cancel reason",
     "emptyCategory": "No products in this category yet",
-    "confirmNewProduct": "Confirm the new product details"
+    "confirmNewProduct": "Confirm the new product details",
+    "pinnedProducts": "Pinned products",
+    "noPinnedHint": "Pin products from the search list to show them here.",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "advanceProcessing": "Start processing",
+    "customerDirtyHint": "Customer info changed — will be saved"
   },
   "orderStatus": {
     "pending": "Pending",
@@ -128,7 +134,8 @@
     "paid": "Paid",
     "preparing": "Preparing",
     "delivered": "Delivered",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "processing": "Processing"
   },
   "paymentStatus": {
     "unpaid": "Unpaid",

@@ -59,10 +59,10 @@
   },
   "order": {
     "title": "បញ្ជាទិញ",
-    "newInvoiceTab": "វិក្កយបត្រថ្មី",
+    "newInvoiceTab": "បញ្ជាទិញថ្មី",
     "listTab": "បញ្ជីបញ្ជាទិញ",
-    "invoice": "វិក្កយបត្រ",
-    "invoiceNo": "លេខ",
+    "invoice": "ការបញ្ជាទិញ",
+    "invoiceNo": "លេខបញ្ជាទិញ",
     "date": "កាលបរិច្ឆេទ",
     "customer": "អតិថិជន",
     "customerName": "ឈ្មោះអតិថិជន",
@@ -78,7 +78,7 @@
     "deliveryFee": "ថ្លៃដឹកជញ្ជូន",
     "total": "សរុប",
     "amountDue": "ទឹកប្រាក់ត្រូវបង់",
-    "placeOrder": "ដាក់ការបញ្ជាទិញ",
+    "placeOrder": "បង្កើតការបញ្ជាទិញ",
     "addItemPlaceholder": "វាយឈ្មោះផលិតផល… ឧ. កូកា x2",
     "newProductHint": "ផលិតផលថ្មី — នឹងត្រូវបានរក្សាទុក",
     "knownProduct": "ផលិតផលមានស្រាប់",
@@ -89,12 +89,12 @@
     "allStatuses": "ទាំងអស់",
     "loadMore": "ផ្ទុកបន្ថែម",
     "emptyList": "រកមិនឃើញការបញ្ជាទិញ",
-    "emptyListHint": "ពេលអ្នកដាក់វិក្កយបត្រ វានឹងបង្ហាញនៅទីនេះ។",
+    "emptyListHint": "ពេលអ្នកបង្កើតការបញ្ជាទិញ វានឹងបង្ហាញនៅទីនេះ។",
     "repeatLast": "ធ្វើម្តងទៀត",
     "clearAll": "សម្អាត",
     "placed": "ដាក់ការបញ្ជាទិញដោយជោគជ័យ!",
     "placedNewProducts": "ផលិតផលថ្មីត្រូវបានរក្សាទុកសម្រាប់លើកក្រោយ",
-    "newInvoiceBtn": "វិក្កយបត្រថ្មី",
+    "newInvoiceBtn": "បញ្ជាទិញថ្មី",
     "markPaid": "សម្គាល់ថាបានបង់",
     "cancelOrder": "លុបការបញ្ជាទិញ",
     "cancelReasonPlaceholder": "ហេតុអ្វីបានលុប? (ស្រេចចិត្ត)",
@@ -119,7 +119,13 @@
     "advanceDelivered": "សម្គាល់ថាបានដឹកជញ្ជូន",
     "cancelReasonLabel": "មូលហេតុនៃការលុប",
     "emptyCategory": "មិនទាន់មានផលិតផលក្នុងប្រភេទនេះទេ",
-    "confirmNewProduct": "សូមបញ្ជាក់ព័ត៌មានផលិតផលថ្មី"
+    "confirmNewProduct": "សូមបញ្ជាក់ព័ត៌មានផលិតផលថ្មី",
+    "pinnedProducts": "ផលិតផលខ្ទាស់",
+    "noPinnedHint": "ខ្ទាស់ផលិតផលពីបញ្ជីស្វែងរកដើម្បីបង្ហាញនៅទីនេះ។",
+    "pin": "ខ្ទាស់",
+    "unpin": "ដកខ្ទាស់",
+    "advanceProcessing": "ចាប់ផ្តើមដំណើរការ",
+    "customerDirtyHint": "ព័ត៌មានអតិថិជនផ្លាស់ប្តូរ — នឹងត្រូវបានរក្សាទុក"
   },
   "orderStatus": {
     "pending": "រង់ចាំ",
@@ -128,7 +134,8 @@
     "paid": "បានបង់",
     "preparing": "កំពុងរៀបចំ",
     "delivered": "បានដឹកជញ្ជូន",
-    "cancelled": "បានលុប"
+    "cancelled": "បានលុប",
+    "processing": "កំពុងដំណើរការ"
   },
   "paymentStatus": {
     "unpaid": "មិនទាន់បង់",

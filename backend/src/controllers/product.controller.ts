@@ -55,9 +55,93 @@ export async function searchProducts(
       cost_price: p.cost_price ? Number(p.cost_price) : null,
       stock_quantity: p.stock_quantity,
       is_available: p.is_available,
+      is_pinned: p.is_pinned,
       category: p.product_type ? { id: p.product_type.id, name: p.product_type.name } : null,
       match_score: score,
     })),
+  };
+}
+
+export async function listPinnedProducts(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  const shop = await getShopForUser(request, reply);
+  if (!shop) return;
+
+  const products = await prisma.products.findMany({
+    where: { shop_id: shop.id, deleted_at: null, is_pinned: true, is_available: true },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      price: true,
+      stock_quantity: true,
+      is_available: true,
+      is_pinned: true,
+    },
+    orderBy: [{ sort_order: 'asc' }, { name: 'asc' }],
+    take: 100,
+  });
+
+  return {
+    products: products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      price: Number(p.price),
+      stock_quantity: p.stock_quantity,
+      is_available: p.is_available,
+      is_pinned: p.is_pinned,
+    })),
+  };
+}
+
+export async function updateProduct(
+  request: FastifyRequest<{
+    Params: { id: string };
+    Body: { is_pinned?: boolean };
+  }>,
+  reply: FastifyReply,
+) {
+  const shop = await getShopForUser(request, reply);
+  if (!shop) return;
+
+  const existing = await prisma.products.findFirst({
+    where: { id: request.params.id, shop_id: shop.id, deleted_at: null },
+    select: { id: true },
+  });
+  if (!existing) {
+    return reply.status(404).send({ error: 'Product not found' });
+  }
+
+  const body = request.body ?? {};
+  const product = await prisma.products.update({
+    where: { id: existing.id },
+    data: {
+      ...(typeof body.is_pinned === 'boolean' ? { is_pinned: body.is_pinned } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      price: true,
+      stock_quantity: true,
+      is_available: true,
+      is_pinned: true,
+    },
+  });
+
+  return {
+    product: {
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      price: Number(product.price),
+      stock_quantity: product.stock_quantity,
+      is_available: product.is_available,
+      is_pinned: product.is_pinned,
+    },
   };
 }
 

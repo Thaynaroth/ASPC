@@ -3,10 +3,12 @@ import prisma from '../utils/prisma';
 import { getShopForUser } from '../utils/shop';
 import { bestMatches, normalizeName } from '../utils/match';
 import { findOrderIdsByShortNumber } from '../utils/orderSearch';
+import { normalizePhone } from './customer.controller';
 import type { Prisma } from '@prisma/client';
 
 const ORDER_STATUSES = [
   'pending',
+  'processing',
   'confirmed',
   'payment_pending',
   'paid',
@@ -53,6 +55,53 @@ const orderInclude = {
 } as const;
 
 type OrderWithDetails = Prisma.ordersGetPayload<{ include: typeof orderInclude }>;
+
+// Find-or-create a customer row by normalized phone inside a transaction.
+async function upsertCustomerByPhone(
+  tx: Prisma.TransactionClient,
+  shopId: string,
+  phoneRaw: string,
+  name?: string,
+  address?: string,
+) {
+  const phone = normalizePhone(phoneRaw);
+  if (!phone) return null;
+
+  const nameValue = (name ?? '').trim() || null;
+  const addressValue = (address ?? '').trim() || null;
+  const data = {
+    ...(nameValue ? { name: nameValue } : {}),
+    ...(addressValue ? { address: addressValue } : {}),
+  };
+
+  const existing = await tx.customers.findFirst({
+    where: { shop_id: shopId, phone },
+  });
+  if (existing) {
+    return tx.customers.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+
+  // Fall back to matching previously stored customers stored in another format.
+  const candidates = await tx.customers.findMany({
+    where: { shop_id: shopId },
+    select: { id: true, phone: true },
+    take: 500,
+  });
+  const hit = candidates.find((c) => c.phone && normalizePhone(c.phone) === phone);
+  if (hit) {
+    return tx.customers.update({
+      where: { id: hit.id },
+      data: { phone, ...data },
+    });
+  }
+
+  return tx.customers.create({
+    data: { shop_id: shopId, phone, name: nameValue, address: addressValue },
+  });
+}
 
 export async function createOrder(
   request: FastifyRequest<{ Body: CreateOrderBody }>,
@@ -169,6 +218,7 @@ export async function createOrder(
 
     const totalAmount = Math.max(0, Math.round((subtotal - discount + deliveryFee) * 100) / 100);
     const isCash = body.payment_method === 'cash';
+    const isPaid = isCash || body.status === 'paid';
     const status = body.status && ORDER_STATUSES.includes(body.status)
       ? body.status
       : isCash
@@ -188,8 +238,8 @@ export async function createOrder(
         total_amount: totalAmount,
         currency: shop.currency,
         payment_method: body.payment_method ?? null,
-        payment_status: isCash ? 'paid' : 'unpaid',
-        paid_at: isCash ? new Date() : null,
+        payment_status: isPaid ? 'paid' : 'unpaid',
+        paid_at: isPaid ? new Date() : null,
         delivery_fee: deliveryFee || null,
         placed_via: 'pos',
         handled_by: request.user.sub,
@@ -215,6 +265,12 @@ export async function createOrder(
           data: { stock_quantity: { decrement: line.quantity } },
         });
       }
+    }
+
+    // Upsert the customer by phone so future invoices can look them up.
+    const phone = (body.customer_phone ?? '').trim();
+    if (phone) {
+      await upsertCustomerByPhone(tx, shop.id, phone, body.customer_name, body.customer_address);
     }
 
     return order;

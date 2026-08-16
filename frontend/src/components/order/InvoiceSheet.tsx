@@ -4,6 +4,8 @@ import {
   Banknote,
   Check,
   Landmark,
+  Phone,
+  Pin,
   Plus,
   Printer,
   QrCode,
@@ -13,12 +15,20 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { catalogApi, type Category, type Product } from '@/services/catalog';
-import { orderApi, type Order, type PaymentMethod } from '@/services/orders';
-import { formatCurrency, parseQtySyntax } from '@/utils/format';
+import { catalogApi, type Product } from '@/services/catalog';
+import { customerApi, type Customer } from '@/services/customers';
+import { orderApi, type Order, type OrderStatus, type PaymentMethod } from '@/services/orders';
+import {
+  formatCurrency,
+  formatKhmerPhone,
+  digitsOnlyPhone,
+  parseQtySyntax,
+} from '@/utils/format';
+import { useDebounced } from '@/hooks/useDebounced';
 import { getErrorMessage } from '@/services/api';
 import DraftLineRow from './DraftLineRow';
 import ProductSuggestions from './ProductSuggestions';
+import CustomerSuggestions from './CustomerSuggestions';
 import { createLine, type DraftLine } from './types';
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; icon: typeof Banknote }> = [
@@ -28,6 +38,16 @@ const PAYMENT_METHODS: Array<{ value: PaymentMethod; icon: typeof Banknote }> = 
 ];
 
 const SEARCH_DEBOUNCE_MS = 220;
+const CUSTOMER_SAVE_DEBOUNCE_MS = 500;
+
+const ORDER_STATUS_OPTIONS: OrderStatus[] = [
+  'pending',
+  'processing',
+  'confirmed',
+  'preparing',
+  'delivered',
+  'paid',
+];
 
 export default function InvoiceSheet({
   lang,
@@ -50,24 +70,31 @@ export default function InvoiceSheet({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const [customerSuggesting, setCustomerSuggesting] = useState(false);
+  const [customerHighlight, setCustomerHighlight] = useState(-1);
+  const customerSavedRef = useRef<{ name: string; address: string }>({ name: '', address: '' });
+  const pickedPhoneRef = useRef('');
+
   const [note, setNote] = useState('');
   const [discount, setDiscount] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [status, setStatus] = useState<OrderStatus>('processing');
 
   const [placing, setPlacing] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
-  const [loadingCategory, setLoadingCategory] = useState(false);
+  const [pinned, setPinned] = useState<Product[]>([]);
+  const [loadingPinned, setLoadingPinned] = useState(false);
   const [repeating, setRepeating] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const newInvoiceRef = useRef<HTMLButtonElement>(null);
   const searchSeq = useRef(0);
+  const customerSeq = useRef(0);
 
   // ─── totals ────────────────────────────────────
   const subtotal = useMemo(
@@ -136,7 +163,9 @@ export default function InvoiceSheet({
       setSuggestions([]);
       setHighlight(-1);
       setError(null);
-      focusWriteLine();
+      // known product → straight back to the write-line for the next item;
+      // new product → focus goes to its qty/price inputs, search after confirm
+      if (product) focusWriteLine();
     },
     [focusWriteLine],
   );
@@ -205,35 +234,102 @@ export default function InvoiceSheet({
     [focusWriteLine],
   );
 
-  // ─── category quick-add ────────────────────────
-  useEffect(() => {
-    catalogApi
-      .listCategories()
-      .then((res) => setCategories(res.categories))
-      .catch(() => setCategories([]));
+  // ─── pinned products quick-add ─────────────────
+  const loadPinned = useCallback(async () => {
+    setLoadingPinned(true);
+    try {
+      const res = await catalogApi.listPinned();
+      setPinned(res.products);
+    } catch {
+      setPinned([]);
+    } finally {
+      setLoadingPinned(false);
+    }
   }, []);
 
-  const toggleCategory = useCallback(
-    async (categoryId: string) => {
-      if (openCategory === categoryId) {
-        setOpenCategory(null);
-        setCategoryProducts([]);
-        return;
-      }
-      setOpenCategory(categoryId);
-      setLoadingCategory(true);
-      setCategoryProducts([]);
+  useEffect(() => {
+    if (open) void loadPinned();
+  }, [open, loadPinned]);
+
+  const togglePin = useCallback(
+    async (product: Product) => {
+      const next = !product.is_pinned;
+      setPinned((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, is_pinned: next } : p)),
+      );
       try {
-        const res = await catalogApi.searchProducts('', 20, categoryId);
-        setCategoryProducts(res.products);
+        await catalogApi.togglePin(product.id, next);
       } catch {
-        setCategoryProducts([]);
-      } finally {
-        setLoadingCategory(false);
+        void loadPinned();
       }
     },
-    [openCategory],
+    [loadPinned],
   );
+
+  // ─── customer search (debounced, stale-safe) ───
+  useEffect(() => {
+    const seq = ++customerSeq.current;
+    const digits = digitsOnlyPhone(customerPhone);
+    if (digits.length < 3 || customerPhone === pickedPhoneRef.current) {
+      setCustomerSuggestions([]);
+      setCustomerSuggesting(false);
+      setCustomerHighlight(-1);
+      return;
+    }
+    setCustomerSuggesting(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await customerApi.search(digits, 6);
+        if (customerSeq.current === seq) {
+          setCustomerSuggestions(res.customers);
+          setCustomerHighlight(res.customers.length ? 0 : -1);
+        }
+      } catch {
+        if (customerSeq.current === seq) setCustomerSuggestions([]);
+      } finally {
+        if (customerSeq.current === seq) setCustomerSuggesting(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [customerPhone]);
+
+  const pickCustomer = useCallback((customer: Customer) => {
+    setCustomerId(customer.id);
+    setCustomerName(customer.name ?? '');
+    setCustomerPhone(formatKhmerPhone(customer.phone ?? ''));
+    setCustomerAddress(customer.address ?? '');
+    customerSavedRef.current = { name: customer.name ?? '', address: customer.address ?? '' };
+    pickedPhoneRef.current = formatKhmerPhone(customer.phone ?? '');
+    setCustomerSuggestions([]);
+    setCustomerHighlight(-1);
+  }, []);
+
+  // dirty when the picked customer's name/address diverge from what was saved
+  const customerDirty =
+    !!customerId &&
+    (customerName.trim() !== customerSavedRef.current.name ||
+      customerAddress.trim() !== customerSavedRef.current.address);
+
+  // keep the selected customer's name/address in sync when the user edits them
+  const debouncedCustomerName = useDebounced(customerName, CUSTOMER_SAVE_DEBOUNCE_MS);
+  const debouncedCustomerAddress = useDebounced(customerAddress, CUSTOMER_SAVE_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (!customerId) return;
+    const next = {
+      name: debouncedCustomerName.trim(),
+      address: debouncedCustomerAddress.trim(),
+    };
+    if (next.name === customerSavedRef.current.name && next.address === customerSavedRef.current.address) {
+      return;
+    }
+    customerSavedRef.current = next;
+    customerApi
+      .update(customerId, next)
+      .catch(() => {
+        /* silent — next order place re-upserts */
+      });
+  }, [customerId, debouncedCustomerName, debouncedCustomerAddress]);
 
   const repeatLastOrder = useCallback(async () => {
     setRepeating(true);
@@ -247,11 +343,15 @@ export default function InvoiceSheet({
         ),
       );
       setCustomerName(last.customer_name ?? '');
-      setCustomerPhone(last.customer_phone ?? '');
+      setCustomerPhone(formatKhmerPhone(last.customer_phone ?? ''));
       setCustomerAddress(last.customer_address ?? '');
+      setCustomerId(null);
+      pickedPhoneRef.current = '';
+      customerSavedRef.current = { name: '', address: '' };
       setNote(last.note ?? '');
       setDiscount(last.discount_amount ? String(last.discount_amount) : '');
       setDeliveryFee(last.delivery_fee ? String(last.delivery_fee) : '');
+      setStatus(last.status === 'cancelled' || last.status === 'payment_pending' ? 'processing' : last.status);
       setError(null);
       focusWriteLine();
     } catch (err) {
@@ -278,12 +378,13 @@ export default function InvoiceSheet({
           product_id: l.product_id,
         })),
         customer_name: customerName || undefined,
-        customer_phone: customerPhone || undefined,
+        customer_phone: digitsOnlyPhone(customerPhone) || undefined,
         customer_address: customerAddress || undefined,
         note: note || undefined,
         discount_amount: discountNum,
         delivery_fee: deliveryNum,
         payment_method: paymentMethod,
+        status,
       });
       setPlacedOrder(res.order);
       onPlaced(res.order);
@@ -302,6 +403,7 @@ export default function InvoiceSheet({
     discountNum,
     deliveryNum,
     paymentMethod,
+    status,
     onPlaced,
   ]);
 
@@ -311,10 +413,15 @@ export default function InvoiceSheet({
     setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
+    setCustomerId(null);
+    setCustomerSuggestions([]);
+    pickedPhoneRef.current = '';
+    customerSavedRef.current = { name: '', address: '' };
     setNote('');
     setDiscount('');
     setDeliveryFee('');
     setPaymentMethod(null);
+    setStatus('processing');
     setPlacedOrder(null);
     setError(null);
     focusWriteLine();
@@ -350,9 +457,9 @@ export default function InvoiceSheet({
         </div>
       )}
 
-      <div className="grid flex-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         {/* ── the paper ─────────────────────────── */}
-        <div className="mx-auto w-full max-w-2xl">
+        <div className="w-full">
           <div
             className={cn(
               'paper-ruled relative rounded-xl border-2 border-dashed bg-card px-6 pt-5 pb-6 shadow-sm sm:px-8',
@@ -395,10 +502,54 @@ export default function InvoiceSheet({
             </div>
 
             {/* customer */}
-            <div className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-3">
-              <label className="block">
+            <div className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <label className="relative block">
                 <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  {t('order.phone')}
+                </span>
+                <input
+                  value={customerPhone}
+                  onChange={(e) => {
+                    pickedPhoneRef.current = '';
+                    setCustomerPhone(formatKhmerPhone(e.target.value));
+                    setCustomerId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customerHighlight >= 0 && customerSuggestions[customerHighlight]) {
+                      e.preventDefault();
+                      pickCustomer(customerSuggestions[customerHighlight]);
+                    } else if (e.key === 'ArrowDown' && customerSuggestions.length) {
+                      e.preventDefault();
+                      setCustomerHighlight((h) => Math.min(customerSuggestions.length - 1, h + 1));
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setCustomerHighlight((h) => Math.max(-1, h - 1));
+                    } else if (e.key === 'Escape') {
+                      setCustomerSuggestions([]);
+                    }
+                  }}
+                  disabled={!!placedOrder}
+                  placeholder="0xx xxx xxx"
+                  inputMode="tel"
+                  className="ink-input w-full py-0.5 text-sm font-semibold"
+                />
+                <CustomerSuggestions
+                  suggestions={customerSuggestions}
+                  suggesting={customerSuggesting}
+                  highlight={customerHighlight}
+                  onHover={setCustomerHighlight}
+                  onPick={pickCustomer}
+                />
+              </label>
+              <label className="block">
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                   {t('order.customerName')}
+                  {customerDirty && (
+                    <span
+                      title={t('order.customerDirtyHint')}
+                      className="size-2 rounded-full bg-amber-400 shadow-[0_0_0_2px_theme(colors.amber.400/25)]"
+                    />
+                  )}
                 </span>
                 <input
                   value={customerName}
@@ -408,20 +559,7 @@ export default function InvoiceSheet({
                   className="ink-input w-full py-0.5 text-sm font-medium"
                 />
               </label>
-              <label className="block">
-                <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                  {t('order.phone')}
-                </span>
-                <input
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  disabled={!!placedOrder}
-                  placeholder={t('order.phone')}
-                  inputMode="tel"
-                  className="ink-input w-full py-0.5 text-sm font-medium"
-                />
-              </label>
-              <label className="block">
+              <label className="block sm:col-span-2">
                 <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                   {t('order.address')}
                 </span>
@@ -447,10 +585,11 @@ export default function InvoiceSheet({
               </div>
 
               <div className="flex flex-col">
-                {lines.map((line) => (
+                {lines.map((line, i) => (
                   <DraftLineRow
                     key={line.id}
                     line={line}
+                    index={i}
                     readOnly={!!placedOrder}
                     striking={striking.has(line.id)}
                     onChangeQty={changeQty}
@@ -505,6 +644,7 @@ export default function InvoiceSheet({
                       addLine(product.name, parseQtySyntax(query).quantity, product)
                     }
                     onAddNew={() => void commitQuery()}
+                    onTogglePin={(product) => void togglePin(product)}
                   />
                 </div>
               )}
@@ -621,7 +761,7 @@ export default function InvoiceSheet({
                   </span>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
                   {PAYMENT_METHODS.map(({ value, icon: Icon }) => {
                     const selected = paymentMethod === value;
                     return (
@@ -629,18 +769,35 @@ export default function InvoiceSheet({
                         key={value}
                         onClick={() => setPaymentMethod(value)}
                         className={cn(
-                          'flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all',
+                          'flex min-w-0 cursor-pointer items-center justify-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-all',
                           selected
                             ? 'border-primary bg-primary text-primary-foreground'
                             : 'border-border/70 bg-card hover:border-primary/50 hover:text-foreground',
                         )}
                       >
-                        <Icon className="size-3.5" />
-                        {t(`paymentMethod.${value}`)}
-                        {selected && <Check className="size-3" strokeWidth={3} />}
+                        <Icon className="size-3.5 shrink-0" />
+                        <span className="truncate">{t(`paymentMethod.${value}`)}</span>
+                        {selected && <Check className="size-3 shrink-0" strokeWidth={3} />}
                       </button>
                     );
                   })}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-dashed border-border/70 bg-background px-2.5 py-1.5">
+                  <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                    {t('order.status')}
+                  </span>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as OrderStatus)}
+                    className="cursor-pointer rounded-md border-2 border-dashed border-input bg-card px-2 py-0.5 text-sm font-semibold outline-none focus:border-ring"
+                  >
+                    {ORDER_STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`orderStatus.${s}`)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <Button
@@ -682,59 +839,56 @@ export default function InvoiceSheet({
             )}
           </div>
 
-          {/* quick-add card */}
+          {/* pinned products card */}
           {!placedOrder && (
             <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
-              <h3 className="font-hand text-lg font-bold tracking-tight">
-                {t('order.quickAdd')}
-              </h3>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {categories.length === 0 && (
-                  <p className="text-xs text-muted-foreground">{t('category.emptyHint')}</p>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-hand text-lg font-bold tracking-tight">
+                  {t('order.pinnedProducts')}
+                </h3>
+                <Pin className="size-4 text-muted-foreground" />
+              </div>
+              <div className="mt-3 flex h-[26rem] flex-col gap-1.5 overflow-y-auto pr-1">
+                {loadingPinned && pinned.length === 0 && (
+                  <p className="text-xs text-muted-foreground">{t('common.loading')}</p>
                 )}
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleCategory(c.id)}
-                    className={cn(
-                      'cursor-pointer rounded-full border px-2.5 py-1 text-xs font-semibold transition-all',
-                      openCategory === c.id
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border/70 hover:border-primary/50',
-                    )}
+                {!loadingPinned && pinned.length === 0 && (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
+                    <Pin className="size-5 text-muted-foreground/60" />
+                    <p className="text-xs text-muted-foreground">{t('order.noPinnedHint')}</p>
+                  </div>
+                )}
+                {pinned.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-2 rounded-lg border border-dashed/70 bg-background px-2.5 py-1.5 transition-colors hover:bg-muted/40"
                   >
-                    {c.name}
-                    <span className="ml-1 opacity-60">{c.product_count}</span>
-                  </button>
+                    <button
+                      onClick={() => addLine(p.name, 1, p)}
+                      className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 text-left"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
+                      <span className="shrink-0 text-xs font-semibold tabular-nums">
+                        {formatCurrency(p.price, 'KHR')}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => addLine(p.name, 1, p)}
+                      aria-label={t('order.addProduct')}
+                      className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={() => void togglePin(p)}
+                      aria-label={t('order.unpin')}
+                      className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-500"
+                    >
+                      <Pin className="size-3.5 fill-current" />
+                    </button>
+                  </div>
                 ))}
               </div>
-
-              {loadingCategory && (
-                <p className="mt-3 text-xs text-muted-foreground">{t('common.loading')}</p>
-              )}
-              {!loadingCategory && openCategory && categoryProducts.length === 0 && (
-                <p className="mt-3 text-xs text-muted-foreground">{t('order.emptyCategory')}</p>
-              )}
-              {!loadingCategory &&
-                openCategory &&
-                categoryProducts.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => addLine(p.name, 1, p)}
-                    className="group flex w-full cursor-pointer items-center justify-between gap-2 border-b border-dashed/70 py-1.5 text-left transition-colors hover:bg-muted/60"
-                  >
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums">
-                      {formatCurrency(p.price, 'KHR')}
-                    </span>
-                    <Plus className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  </button>
-                ))}
-              {!loadingCategory && openCategory && categoryProducts.length === 20 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {t('order.moreProducts', { count: 20 })}
-                </p>
-              )}
             </div>
           )}
         </aside>

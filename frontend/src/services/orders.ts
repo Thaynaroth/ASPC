@@ -2,6 +2,7 @@ import { request } from './api';
 
 export type OrderStatus =
   | 'pending'
+  | 'processing'
   | 'confirmed'
   | 'payment_pending'
   | 'paid'
@@ -72,6 +73,7 @@ export interface CreateOrderInput {
   discount_amount?: number;
   delivery_fee?: number;
   payment_method?: PaymentMethod | null;
+  status?: OrderStatus;
 }
 
 export const orderApi = {

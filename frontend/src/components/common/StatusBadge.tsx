@@ -4,6 +4,7 @@ import type { OrderStatus, PaymentStatus } from '@/services/orders';
 
 const statusStyles: Record<OrderStatus, string> = {
   pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400',
+  processing: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400',
   confirmed: 'bg-sky-500/10 text-sky-600 ring-sky-500/20 dark:text-sky-400',
   payment_pending: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-400',
   paid: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400',

@@ -15,6 +15,7 @@ export interface Product {
   price: number;
   stock_quantity: number;
   is_available: boolean;
+  is_pinned?: boolean;
   category: { id: string; name: string } | null;
   match_score?: number;
 }
@@ -44,6 +45,14 @@ export const catalogApi = {
     if (categoryId) params.set('category_id', categoryId);
     return request<{ products: Product[] }>(`/products?${params.toString()}`);
   },
+
+  listPinned: () => request<{ products: Product[] }>('/products/pinned'),
+
+  togglePin: (id: string, isPinned: boolean) =>
+    request<{ product: Product }>(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_pinned: isPinned }),
+    }),
 
   createProduct: (data: { name: string; price: number; category_id?: string }) =>
     request<{ product: Product }>('/products', {

@@ -11,7 +11,8 @@ import SideDrawer from './SideDrawer';
 
 // fulfillment flow; payment_pending is resolved via "mark paid"
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  pending: 'confirmed',
+  pending: 'processing',
+  processing: 'confirmed',
   confirmed: 'preparing',
   preparing: 'delivered',
 };
@@ -140,13 +141,15 @@ export default function OrderDetailPanel({
                   <span className="w-10 text-right">{t('order.qty')}</span>
                   <span className="w-20 text-right">{t('order.amount')}</span>
                 </div>
-                {order.items.map((item) => (
+                {order.items.map((item, i) => (
                   <div
                     key={item.id}
                     className="flex items-center gap-3 border-b border-dashed/70 py-1.5 text-sm"
                   >
                     <span className="flex w-5 justify-center">
-                      <span className="ink-tick text-emerald-500">✓</span>
+                      <span className="rounded-full bg-primary/10 px-1 text-[10px] font-bold text-primary tabular-nums">
+                        {i + 1}
+                      </span>
                     </span>
                     <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
                     <span className="w-10 text-right text-xs text-muted-foreground tabular-nums">

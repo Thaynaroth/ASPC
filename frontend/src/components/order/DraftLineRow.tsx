@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Minus, PackagePlus, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -7,6 +7,7 @@ import type { DraftLine } from './types';
 
 export default function DraftLineRow({
   line,
+  index,
   readOnly,
   striking,
   onChangeQty,
@@ -16,6 +17,7 @@ export default function DraftLineRow({
   onNextLine,
 }: {
   line: DraftLine;
+  index: number;
   readOnly: boolean;
   striking: boolean;
   onChangeQty: (id: string, delta: number) => void;
@@ -26,6 +28,18 @@ export default function DraftLineRow({
 }) {
   const { t } = useTranslation();
   const [qtyDraft, setQtyDraft] = useState(String(line.quantity));
+  const priceRef = useRef<HTMLInputElement>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
+
+  // deterministically park focus on qty when a new-product line is added
+  // (rAF so it always lands after the async addLine that mounted this row)
+  useEffect(() => {
+    if (line.pending) {
+      requestAnimationFrame(() => qtyRef.current?.focus());
+    }
+    // mount-only: a line is either pending at birth or never becomes pending
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // keep the draft in sync when quantity changes externally (merge/stepper)
   useEffect(() => {
@@ -56,15 +70,16 @@ export default function DraftLineRow({
           <label className="flex items-center gap-1 text-xs text-muted-foreground">
             {t('order.qty')}
             <input
+              ref={qtyRef}
               value={qtyDraft}
               onChange={(e) => setQtyDraft(e.target.value.replace(/[^\d]/g, ''))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.focus();
+                  e.preventDefault();
+                  priceRef.current?.focus();
                 }
               }}
               inputMode="numeric"
-              autoFocus
               className="h-8 w-14 rounded-md border-2 border-dashed border-input bg-card px-2 text-right text-sm font-semibold tabular-nums outline-none focus:border-ring"
             />
           </label>
@@ -72,10 +87,11 @@ export default function DraftLineRow({
           <label className="flex items-center gap-1 text-xs text-muted-foreground">
             {t('order.price')}
             <input
+              ref={priceRef}
               value={line.price ?? ''}
               onChange={(e) => onChangePrice(line.id, e.target.value.replace(/[^\d.]/g, ''))}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' || e.key === 'Tab') {
                   e.preventDefault();
                   onConfirm(line.id, Number(qtyDraft) || 1);
                 }
@@ -116,10 +132,9 @@ export default function DraftLineRow({
       )}
     >
       <span className="flex w-5 justify-center">
-        <Check
-          className={cn('ink-tick size-4 text-emerald-500', striking && 'text-muted-foreground')}
-          strokeWidth={3}
-        />
+        <span className="rounded-full bg-primary/10 px-1 text-[10px] font-bold text-primary tabular-nums">
+          {index + 1}
+        </span>
       </span>
 
       <span className="min-w-0 flex-1 truncate text-sm font-medium">

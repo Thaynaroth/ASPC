@@ -12,6 +12,7 @@ import { getErrorMessage } from '@/services/api';
 const STATUS_FILTERS = [
   { key: 'all', label: 'order.allStatuses' },
   { key: 'pending', label: 'orderStatus.pending' },
+  { key: 'processing', label: 'orderStatus.processing' },
   { key: 'paid', label: 'orderStatus.paid' },
   { key: 'cancelled', label: 'orderStatus.cancelled' },
 ] as const;
