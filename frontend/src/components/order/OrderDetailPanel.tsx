@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Printer, CheckCheck, Ban, Loader2 } from 'lucide-react';
+import { Printer, CheckCheck, Ban, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, PaymentBadge } from '@/components/common/StatusBadge';
 import { orderApi, type Order, type OrderStatus } from '@/services/orders';
 import { formatCurrency, formatDateTime } from '@/utils/format';
 import { getErrorMessage } from '@/services/api';
+import SideDrawer from './SideDrawer';
 
 // fulfillment flow; payment_pending is resolved via "mark paid"
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -38,20 +39,9 @@ export default function OrderDetailPanel({
     setError(null);
   }, [order?.id]);
 
-  useEffect(() => {
-    if (!order) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [order, onClose]);
-
-  if (!order) return null;
-
-  const next = NEXT_STATUS[order.status];
-  const canMarkPaid = !order.paid_at && order.status !== 'cancelled';
-  const canCancel = order.status !== 'cancelled' && order.status !== 'delivered';
+  const next = order ? NEXT_STATUS[order.status] : null;
+  const canMarkPaid = !!order && !order.paid_at && order.status !== 'cancelled';
+  const canCancel = !!order && order.status !== 'cancelled' && order.status !== 'delivered';
 
   const run = async (id: string, action: () => Promise<{ order: Order }>) => {
     setBusy(id);
@@ -67,29 +57,22 @@ export default function OrderDetailPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      <div
-        className="absolute inset-0 bg-foreground/20 backdrop-blur-[2px]"
-        onClick={onClose}
-      />
-      <div className="print-area relative flex h-full w-full max-w-md flex-col border-l border-border bg-background shadow-lg">
-        {/* header */}
-        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-          <div className="flex items-center gap-2">
+    <SideDrawer
+      open={!!order}
+      onClose={onClose}
+      width="md"
+      title={
+        order && (
+          <>
             <h3 className="font-hand text-xl font-bold tracking-tight">{t('order.invoice')}</h3>
             <span className="rounded-md bg-muted px-1.5 py-0.5 font-hand text-sm font-bold">
               {order.number}
             </span>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label={t('common.close')}
-            className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
+          </>
+        )
+      }
+    >
+      {order && (
         <div className="flex-1 overflow-y-auto">
           {error && (
             <div className="mx-4 mt-4 rounded-lg border-2 border-dashed border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -99,7 +82,7 @@ export default function OrderDetailPanel({
 
           {/* ── paper invoice preview ────────────── */}
           <div className="p-4">
-            <div className="paper-ruled relative rounded-xl border-2 border-dashed bg-card px-5 py-4 shadow-sm">
+            <div className="paper-ruled print-area relative rounded-xl border-2 border-dashed bg-card px-5 py-4 shadow-sm">
               {order.status === 'cancelled' && (
                 <div className="ink-stamp pointer-events-none absolute top-16 right-4 z-10 rounded-md border-4 px-3 py-1 font-hand text-2xl font-bold tracking-widest text-rose-600/70 uppercase select-none">
                   {t('order.stampCancelled')}
@@ -195,7 +178,7 @@ export default function OrderDetailPanel({
                     <span className="tabular-nums">{formatCurrency(order.delivery_fee, order.currency)}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t-2 border-dashed pt-1.5">
+                <div className="flex justify-between pt-1.5">
                   <span className="font-hand text-lg font-bold">{t('order.total')}</span>
                   <span className="border-b-4 border-double px-1 text-lg font-extrabold tabular-nums">
                     {formatCurrency(order.total_amount, order.currency)}
@@ -321,7 +304,7 @@ export default function OrderDetailPanel({
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </SideDrawer>
   );
 }

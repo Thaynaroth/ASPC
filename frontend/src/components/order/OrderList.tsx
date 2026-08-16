@@ -1,27 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Search, Receipt, RefreshCw } from 'lucide-react';
+import { ChevronRight, Search, Receipt, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, PaymentBadge } from '@/components/common/StatusBadge';
 import { useDebounced } from '@/hooks/useDebounced';
-import {
-  orderApi,
-  type Order,
-  type OrderStatus,
-} from '@/services/orders';
+import { orderApi, type Order } from '@/services/orders';
 import { formatCurrency, formatDateTime } from '@/utils/format';
 import { getErrorMessage } from '@/services/api';
 
-const ALL_STATUSES: OrderStatus[] = [
-  'pending',
-  'confirmed',
-  'payment_pending',
-  'paid',
-  'preparing',
-  'delivered',
-  'cancelled',
-];
+const STATUS_FILTERS = [
+  { key: 'all', label: 'order.allStatuses' },
+  { key: 'pending', label: 'orderStatus.pending' },
+  { key: 'paid', label: 'orderStatus.paid' },
+  { key: 'cancelled', label: 'orderStatus.cancelled' },
+] as const;
 
 export default function OrderList({
   lang,
@@ -38,7 +31,6 @@ export default function OrderList({
 
   const [status, setStatus] = useState<string>('all');
   const [q, setQ] = useState('');
-  const [dateRange, setDateRange] = useState<'all' | 'today' | '7d'>('all');
   const [orders, setOrders] = useState<Order[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState(0);
@@ -57,19 +49,9 @@ export default function OrderList({
         page: p,
         limit: 20,
       };
-      if (dateRange === 'today') {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        params.from = start.toISOString();
-      } else if (dateRange === '7d') {
-        const start = new Date();
-        start.setDate(start.getDate() - 6);
-        start.setHours(0, 0, 0, 0);
-        params.from = start.toISOString();
-      }
       return params;
     },
-    [status, debouncedQ, dateRange],
+    [status, debouncedQ],
   );
 
   const load = useCallback(
@@ -97,19 +79,15 @@ export default function OrderList({
     void load(1, false);
   }, [load, refreshKey]);
 
-  const statusTabs: Array<{ key: string; label: string; count: number }> = [
-    { key: 'all', label: t('order.allStatuses'), count: counts.all ?? 0 },
-    ...ALL_STATUSES.map((s) => ({
-      key: s,
-      label: t(`orderStatus.${s}`),
-      count: counts[s] ?? 0,
-    })),
-  ];
+  const statusFilters = STATUS_FILTERS.map((f) => ({
+    key: f.key,
+    label: t(f.label),
+  }));
 
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center gap-2 p-8 text-muted-foreground">
-        <RefreshCw className="size-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin" />
         <span className="text-sm">{t('common.loading')}</span>
       </div>
     );
@@ -136,60 +114,36 @@ export default function OrderList({
         </div>
 
         <div className="flex rounded-lg border border-border bg-card p-0.5">
-          {(
-            [
-              { key: 'all', label: t('common.all') },
-              { key: 'today', label: t('common.today') },
-              { key: '7d', label: t('common.last7Days') },
-            ] as const
-          ).map((r) => (
+          {statusFilters.map((tab) => (
             <button
-              key={r.key}
-              onClick={() => setDateRange(r.key)}
+              key={tab.key}
+              onClick={() => setStatus(tab.key)}
               className={cn(
-                'cursor-pointer rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
-                dateRange === r.key
+                'flex cursor-pointer items-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold transition-colors',
+                status === tab.key
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {r.label}
+              {tab.label}
+              <span
+                className={cn(
+                  'rounded-full px-1.5 text-[10px] font-bold tabular-nums',
+                  status === tab.key
+                    ? 'bg-primary-foreground/20'
+                    : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {counts[tab.key] ?? 0}
+              </span>
             </button>
           ))}
         </div>
 
-        <Button variant="outline" onClick={() => void load(1, false)} className="ml-auto">
-          <RefreshCw className="size-4" />
-          {t('common.search')}
+        <Button size="lg" onClick={onNewInvoice} className="ml-auto font-hand">
+          <Plus className="size-4" />
+          {t('order.newInvoiceBtn')}
         </Button>
-      </div>
-
-      {/* status tabs */}
-      <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setStatus(tab.key)}
-            className={cn(
-              'flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
-              status === tab.key
-                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                : 'border-border/70 bg-card hover:border-primary/40',
-            )}
-          >
-            {tab.label}
-            <span
-              className={cn(
-                'rounded-full px-1.5 text-[10px] font-bold tabular-nums',
-                status === tab.key
-                  ? 'bg-primary-foreground/20'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {tab.count}
-            </span>
-          </button>
-        ))}
       </div>
 
       {/* table */}

@@ -105,7 +105,7 @@ export default function AppSidebar() {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {sections.map((section, index) => (
           <div key={section.labelKey}>
-            {index > 0 && <div className="my-4 h-px bg-border/50" />}
+            {index > 0 && <div className="my-4 h-px" />}
             <div className={sectionLabelClass}>{t(section.labelKey)}</div>
             <div className="space-y-0.5">
               {section.items.map((item) => (
@@ -135,7 +135,7 @@ export default function AppSidebar() {
 
       {/* User profile */}
       <div className="px-3 pt-2 pb-3">
-        <div className="mb-2 h-px bg-border/50" />
+        <div className="mb-2 h-px" />
         <Menu.Root>
           <Menu.Trigger className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/50">
             <div className="relative shrink-0">

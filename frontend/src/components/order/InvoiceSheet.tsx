@@ -31,9 +31,11 @@ const SEARCH_DEBOUNCE_MS = 220;
 
 export default function InvoiceSheet({
   lang,
+  open,
   onPlaced,
 }: {
   lang: string;
+  open: boolean;
   onPlaced: (order: Order) => void;
 }) {
   const { t } = useTranslation();
@@ -107,6 +109,11 @@ export default function InvoiceSheet({
   const focusWriteLine = useCallback(() => {
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
+
+  // focus the write-line whenever the drawer opens
+  useEffect(() => {
+    if (open) focusWriteLine();
+  }, [open, focusWriteLine]);
 
   const addLine = useCallback(
     (name: string, quantity: number, product?: Product) => {
@@ -336,7 +343,7 @@ export default function InvoiceSheet({
 
   // ─── render ────────────────────────────────────
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto p-4">
+    <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
       {error && (
         <div className="mx-4 rounded-lg border-2 border-dashed border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
@@ -349,7 +356,7 @@ export default function InvoiceSheet({
           <div
             className={cn(
               'paper-ruled relative rounded-xl border-2 border-dashed bg-card px-6 pt-5 pb-6 shadow-sm sm:px-8',
-              placedOrder && 'print-area',
+              placedOrder && open && 'print-area',
             )}
           >
             {placedOrder && (
@@ -462,7 +469,6 @@ export default function InvoiceSheet({
                     <span className="font-hand text-lg font-bold text-primary">→</span>
                     <input
                       ref={inputRef}
-                      autoFocus
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       onKeyDown={(e) => {
@@ -544,7 +550,7 @@ export default function InvoiceSheet({
                   />
                 )}
               </div>
-              <div className="flex items-center justify-end gap-3 border-t-2 border-dashed pt-1.5">
+              <div className="flex items-center justify-end gap-3 pt-1.5">
                 <span className="font-hand text-lg font-bold tracking-tight">
                   {t('order.total')}
                 </span>
@@ -736,7 +742,7 @@ export default function InvoiceSheet({
 
       {/* ── mobile sticky checkout bar ──────────── */}
       {!placedOrder && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 shadow-[0_-4px_12px_-6px_rgba(0,0,0,0.2)] xl:hidden">
+        <div className="sticky bottom-0 z-30 -mx-4 -mb-4 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 shadow-[0_-4px_12px_-6px_rgba(0,0,0,0.2)] xl:hidden">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
               {t('order.total')}
