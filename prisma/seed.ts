@@ -114,11 +114,34 @@ async function main() {
     create: { shop_id: sneakerShop.id },
   });
 
+  const sneakersCategory = await prisma.product_types.upsert({
+    where: { shop_id_name: { shop_id: sneakerShop.id, name: 'Sneakers' } },
+    update: {},
+    create: {
+      shop_id: sneakerShop.id,
+      name: 'Sneakers',
+      description: 'Premium sneakers — Nike, Adidas, New Balance',
+    },
+  });
+
+  const casualCategory = await prisma.product_types.upsert({
+    where: { shop_id_name: { shop_id: sneakerShop.id, name: 'Casual' } },
+    update: {},
+    create: {
+      shop_id: sneakerShop.id,
+      name: 'Casual',
+      description: 'Slip-ons, sandals & everyday shoes',
+    },
+  });
+
   const sneakers = [
-    { name: 'Classic White Sneaker', sku: 'CSN-001', price: 45.0, stock: 24 },
-    { name: 'Retro Running Shoe', sku: 'RRS-002', price: 62.0, stock: 18 },
-    { name: 'High-Top Street Sneaker', sku: 'HTS-003', price: 78.0, stock: 12 },
-    { name: 'Canvas Slip-On', sku: 'CSO-004', price: 28.0, stock: 30 },
+    { name: 'Classic White Sneaker', sku: 'CSN-001', price: 45000, stock: 24, categoryId: sneakersCategory.id },
+    { name: 'Retro Running Shoe', sku: 'RRS-002', price: 62000, stock: 18, categoryId: sneakersCategory.id },
+    { name: 'High-Top Street Sneaker', sku: 'HTS-003', price: 78000, stock: 12, categoryId: sneakersCategory.id },
+    { name: 'Canvas Slip-On', sku: 'CSO-004', price: 28000, stock: 30, categoryId: casualCategory.id },
+    { name: 'Air Running 2000', sku: 'AR2-005', price: 88000, stock: 8, categoryId: sneakersCategory.id },
+    { name: 'Low-Cut Flex Sneaker', sku: 'LFS-006', price: 55000, stock: 15, categoryId: sneakersCategory.id },
+    { name: 'Leather Casual Loafers', sku: 'LCL-007', price: 72000, stock: 6, categoryId: casualCategory.id },
   ];
 
   for (const item of sneakers) {
@@ -130,14 +153,20 @@ async function main() {
       await prisma.products.create({
         data: {
           shop_id: sneakerShop.id,
+          product_type_id: item.categoryId,
           name: item.name,
           sku: item.sku,
           price: item.price,
-          cost_price: item.price * 0.7,
+          cost_price: Math.round(item.price * 0.7),
           stock_quantity: item.stock,
           low_stock_threshold: 5,
           is_available: true,
         },
+      });
+    } else {
+      await prisma.products.update({
+        where: { id: existingProduct.id },
+        data: { product_type_id: item.categoryId, price: item.price },
       });
     }
   }

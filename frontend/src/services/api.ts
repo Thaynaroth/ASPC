@@ -47,6 +47,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export async function getErrorMessage(err: unknown): Promise<string> {
+  if (err instanceof Error) return err.message;
+  return 'Something went wrong';
+}
+
+export { request };
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ user: User }>('/auth/login', {

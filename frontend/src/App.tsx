@@ -6,6 +6,8 @@ import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
+import OrderPage from '@/pages/OrderPage';
+import CategoryPage from '@/pages/CategoryPage';
 import PlaceholderPage from '@/pages/PlaceholderPage';
 
 function GuestRoute({ children }: { children: ReactNode }) {
@@ -45,10 +47,10 @@ export default function App() {
               <Route path="report" element={<PlaceholderPage title="Report" />} />
               <Route path="agent" element={<PlaceholderPage title="Agent" />} />
               <Route path="chat" element={<PlaceholderPage title="Chat" />} />
-              <Route path="order" element={<PlaceholderPage title="Order" />} />
+              <Route path="order" element={<OrderPage />} />
               <Route path="promotion" element={<PlaceholderPage title="Promotion" />} />
               <Route path="product" element={<PlaceholderPage title="Product" />} />
-              <Route path="category" element={<PlaceholderPage title="Category" />} />
+              <Route path="category" element={<CategoryPage />} />
               <Route path="customer" element={<PlaceholderPage title="Customer" />} />
               <Route path="shop" element={<PlaceholderPage title="Shop" />} />
               <Route path="user" element={<PlaceholderPage title="User" />} />
