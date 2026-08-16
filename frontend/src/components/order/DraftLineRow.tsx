@@ -10,7 +10,9 @@ export default function DraftLineRow({
   index,
   readOnly,
   striking,
+  focusQty,
   onChangeQty,
+  onChangeQtyValue,
   onChangePrice,
   onConfirm,
   onRemove,
@@ -20,7 +22,9 @@ export default function DraftLineRow({
   index: number;
   readOnly: boolean;
   striking: boolean;
+  focusQty?: boolean;
   onChangeQty: (id: string, delta: number) => void;
+  onChangeQtyValue: (id: string, value: string) => void;
   onChangePrice: (id: string, value: string) => void;
   onConfirm: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
@@ -31,15 +35,32 @@ export default function DraftLineRow({
   const priceRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
 
-  // deterministically park focus on qty when a new-product line is added
-  // (rAF so it always lands after the async addLine that mounted this row)
+  const focusQtyInput = () => {
+    qtyRef.current?.focus();
+    qtyRef.current?.select();
+  };
+
+  // force focus onto qty when a new-product line is added — sync + rAF + timeout
+  // so no later focus call (async addLine, drawer focus, etc.) can steal it
   useEffect(() => {
-    if (line.pending) {
-      requestAnimationFrame(() => qtyRef.current?.focus());
-    }
+    if (!line.pending) return;
+    focusQtyInput();
+    const raf = requestAnimationFrame(focusQtyInput);
+    const timer = window.setTimeout(focusQtyInput, 0);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
     // mount-only: a line is either pending at birth or never becomes pending
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // focus qty after a known product is added to the list
+  useEffect(() => {
+    if (focusQty && !line.pending) {
+      focusQtyInput();
+    }
+  }, [focusQty, line.pending]);
 
   // keep the draft in sync when quantity changes externally (merge/stepper)
   useEffect(() => {
@@ -71,6 +92,7 @@ export default function DraftLineRow({
             {t('order.qty')}
             <input
               ref={qtyRef}
+              autoFocus
               value={qtyDraft}
               onChange={(e) => setQtyDraft(e.target.value.replace(/[^\d]/g, ''))}
               onKeyDown={(e) => {
@@ -147,7 +169,7 @@ export default function DraftLineRow({
         )}
       </span>
 
-      <span className="flex w-14 items-center justify-end gap-1">
+      <span className="flex w-16 items-center justify-end gap-0.5">
         <button
           onClick={() => onChangeQty(line.id, -1)}
           disabled={readOnly}
@@ -156,9 +178,23 @@ export default function DraftLineRow({
         >
           <Minus className="size-3.5" />
         </button>
-        <span className="w-8 text-center text-sm font-semibold tabular-nums">
-          {line.quantity}
-        </span>
+        <input
+          ref={qtyRef}
+          value={qtyDraft}
+          disabled={readOnly}
+          onChange={(e) => setQtyDraft(e.target.value.replace(/[^\d]/g, ''))}
+          onBlur={() => onChangeQtyValue(line.id, qtyDraft)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onChangeQtyValue(line.id, qtyDraft);
+              priceRef.current?.focus();
+            }
+          }}
+          inputMode="numeric"
+          aria-label={t('order.qty')}
+          className="w-9 rounded border-2 border-dashed border-transparent bg-transparent py-0.5 text-center text-sm font-semibold tabular-nums outline-none transition-colors hover:border-muted focus:border-ring focus:bg-card"
+        />
         <button
           onClick={() => onChangeQty(line.id, 1)}
           disabled={readOnly}
@@ -174,6 +210,7 @@ export default function DraftLineRow({
           <span className="text-sm tabular-nums">{formatCurrency(line.price, 'KHR')}</span>
         ) : (
           <input
+            ref={priceRef}
             value={line.price ?? ''}
             onChange={(e) => onChangePrice(line.id, e.target.value)}
             onKeyDown={(e) => {

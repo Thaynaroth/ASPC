@@ -89,9 +89,11 @@ export default function InvoiceSheet({
 
   const [pinned, setPinned] = useState<Product[]>([]);
   const [loadingPinned, setLoadingPinned] = useState(false);
+  const [focusLineId, setFocusLineId] = useState<string | null>(null);
   const [repeating, setRepeating] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
   const newInvoiceRef = useRef<HTMLButtonElement>(null);
   const searchSeq = useRef(0);
   const customerSeq = useRef(0);
@@ -137,37 +139,48 @@ export default function InvoiceSheet({
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
 
-  // focus the write-line whenever the drawer opens
+  // focus the phone number first whenever the drawer opens / a new order starts
   useEffect(() => {
-    if (open) focusWriteLine();
-  }, [open, focusWriteLine]);
+    if (open) {
+      requestAnimationFrame(() => {
+        if (placedOrder) newInvoiceRef.current?.focus();
+        else phoneRef.current?.focus();
+      });
+    }
+  }, [open, placedOrder]);
 
   const addLine = useCallback(
     (name: string, quantity: number, product?: Product) => {
       const clean = name.trim();
       if (!clean) return;
-      setLines((prev) => {
-        const existing = product
-          ? prev.find((l) => l.product_id === product.id && !l.pending)
-          : prev.find((l) => l.name.toLowerCase() === clean.toLowerCase() && l.isNew);
-        if (existing) {
-          return prev.map((l) =>
+      const existing = product
+        ? lines.find((l) => l.product_id === product.id && !l.pending)
+        : lines.find((l) => l.name.toLowerCase() === clean.toLowerCase() && l.isNew);
+      if (existing) {
+        setLines((prev) =>
+          prev.map((l) =>
             l.id === existing.id
               ? { ...l, quantity: l.quantity + quantity, price: l.price ?? product?.price ?? null }
               : l,
-          );
-        }
-        return [...prev, createLine(clean, quantity, product?.price ?? null, product?.id ?? null)];
-      });
+          ),
+        );
+        setQuery('');
+        setSuggestions([]);
+        setHighlight(-1);
+        setError(null);
+        if (product) focusWriteLine();
+        return;
+      }
+      const line = createLine(clean, quantity, product?.price ?? null, product?.id ?? null);
+      setLines((prev) => [...prev, line]);
       setQuery('');
       setSuggestions([]);
       setHighlight(-1);
       setError(null);
-      // known product → straight back to the write-line for the next item;
-      // new product → focus goes to its qty/price inputs, search after confirm
-      if (product) focusWriteLine();
+      // known product → focus its qty input (new product auto-focuses its own qty)
+      if (product) setFocusLineId(line.id);
     },
-    [focusWriteLine],
+    [lines, focusWriteLine],
   );
 
   const commitQuery = useCallback(async () => {
@@ -209,6 +222,13 @@ export default function InvoiceSheet({
   const changeQty = useCallback((id: string, delta: number) => {
     setLines((prev) =>
       prev.map((l) => (l.id === id ? { ...l, quantity: Math.max(1, l.quantity + delta) } : l)),
+    );
+  }, []);
+
+  const setQtyValue = useCallback((id: string, value: string) => {
+    const num = parseInt(value.replace(/\D/g, ''), 10);
+    setLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, quantity: Number.isNaN(num) ? 1 : Math.max(1, num) } : l)),
     );
   }, []);
 
@@ -424,8 +444,8 @@ export default function InvoiceSheet({
     setStatus('processing');
     setPlacedOrder(null);
     setError(null);
-    focusWriteLine();
-  }, [focusWriteLine]);
+    requestAnimationFrame(() => phoneRef.current?.focus());
+  }, []);
 
   // focus "New invoice" once placed
   useEffect(() => {
@@ -508,6 +528,7 @@ export default function InvoiceSheet({
                   {t('order.phone')}
                 </span>
                 <input
+                  ref={phoneRef}
                   value={customerPhone}
                   onChange={(e) => {
                     pickedPhoneRef.current = '';
@@ -592,7 +613,9 @@ export default function InvoiceSheet({
                     index={i}
                     readOnly={!!placedOrder}
                     striking={striking.has(line.id)}
+                    focusQty={focusLineId === line.id}
                     onChangeQty={changeQty}
+                    onChangeQtyValue={setQtyValue}
                     onChangePrice={changePrice}
                     onConfirm={confirmLine}
                     onRemove={removeLine}
