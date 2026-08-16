@@ -18,11 +18,8 @@ import {
   User,
   LogOut,
   ChevronUp,
-  Sun,
-  Moon,
   Store,
 } from 'lucide-react';
-import { useTheme } from '@/hooks/use-theme';
 
 interface SidebarItem {
   labelKey: string;
@@ -57,51 +54,49 @@ const sections: SidebarSection[] = [
   },
 ];
 
+const sectionLabelClass =
+  'px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60';
+
 export default function AppSidebar() {
   const { t } = useTranslation();
   const { lang } = useParams<{ lang: string }>();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+
+  const shop = user?.shops?.[0];
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+      'group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
       isActive
-        ? 'bg-primary text-primary-foreground shadow-sm'
-        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        ? 'text-foreground'
+        : 'text-muted-foreground/80 hover:text-foreground',
     );
 
-  const sectionLabelClass = 'px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground';
-
   return (
-    <aside className="flex h-full w-60 flex-col rounded-xl border-2 border-dashed bg-card">
+    <aside className="flex h-full w-60 flex-col">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
-        <Logo />
+        <Logo className="scale-90 opacity-90" />
         <div className="flex flex-col">
           <span className="font-hand text-xl leading-tight font-bold tracking-tight">ASPC</span>
-          <span className="text-[10px] leading-tight font-medium text-muted-foreground">
+          <span className="text-[10px] leading-tight font-medium text-muted-foreground/70">
             Automation Selling Platform
           </span>
         </div>
       </div>
 
       {/* Current shop (non-superadmin users) */}
-      {user?.shops && user.shops.length > 0 && (
-        <div className="px-3 pb-2">
-          <div className="flex items-center gap-2.5 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-3 py-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400">
-              <Store className="size-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold leading-tight">
-                {user.shops[0].name}
-              </p>
-              <p className="truncate text-[10px] leading-tight text-muted-foreground">
-                {user.shops[0].role}
-              </p>
-            </div>
+      {shop && (
+        <div className="flex items-center gap-2.5 px-5 pb-2">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400">
+            <Store className="size-3.5" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold leading-tight">{shop.name}</p>
+            <p className="truncate text-[10px] leading-tight text-muted-foreground/70">
+              {shop.role}
+            </p>
           </div>
         </div>
       )}
@@ -110,17 +105,27 @@ export default function AppSidebar() {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {sections.map((section, index) => (
           <div key={section.labelKey}>
-            {index > 0 && <div className="my-4 h-px bg-border" />}
+            {index > 0 && <div className="my-4 h-px bg-border/50" />}
             <div className={sectionLabelClass}>{t(section.labelKey)}</div>
             <div className="space-y-0.5">
               {section.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={`/${lang}/${item.path}`}
-                  className={linkClass}
-                >
-                  <item.icon className="size-4 shrink-0" />
-                  {t(item.labelKey)}
+                <NavLink key={item.path} to={`/${lang}/${item.path}`} className={linkClass}>
+                  {({ isActive }) => (
+                    <>
+                      <item.icon
+                        className={cn(
+                          'size-4 shrink-0 transition-colors',
+                          isActive
+                            ? 'text-primary'
+                            : 'text-muted-foreground/60 group-hover:text-foreground',
+                        )}
+                      />
+                      {t(item.labelKey)}
+                      {isActive && (
+                        <span className="absolute top-1/2 left-0 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
+                      )}
+                    </>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -128,73 +133,61 @@ export default function AppSidebar() {
         ))}
       </nav>
 
-      {/* Theme toggle */}
-      <div className="px-3">
-        <button
-          onClick={toggleTheme}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          {theme === 'dark' ? (
-            <Sun className="size-4 shrink-0" />
-          ) : (
-            <Moon className="size-4 shrink-0" />
-          )}
-          {t('sidebar.theme')}
-        </button>
-      </div>
-
-      {/* User menu */}
+      {/* User profile */}
       <div className="px-3 pt-2 pb-3">
-        <div className="h-px bg-border" />
+        <div className="mb-2 h-px bg-border/50" />
         <Menu.Root>
-          <Menu.Trigger className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted outline-none">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              {(user?.full_name || user?.email || '?')[0].toUpperCase()}
+          <Menu.Trigger className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/50">
+            <div className="relative shrink-0">
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary ring-1 ring-primary/20">
+                {(user?.full_name || user?.email || '?')[0].toUpperCase()}
+              </div>
+              <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
+              <p className="truncate text-sm font-semibold leading-tight">
                 {user?.full_name || user?.email}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {user?.roles?.join(', ') || '---'}
+              <p className="truncate text-[11px] leading-tight text-muted-foreground/70">
+                {user?.email}
               </p>
             </div>
-            <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronUp className="size-4 shrink-0 text-muted-foreground/60" />
           </Menu.Trigger>
           <Menu.Portal>
             <Menu.Positioner className="outline-none" side="top" sideOffset={8}>
-              <Menu.Popup className="min-w-56 origin-[var(--transform-origin)] rounded-lg border bg-popover p-1 text-sm text-popover-foreground shadow-lg outline-none">
+              <Menu.Popup className="min-w-56 origin-[var(--transform-origin)] rounded-lg border border-border bg-popover p-1 text-sm text-popover-foreground shadow-lg outline-none">
                 <div className="flex items-center gap-3 rounded-md px-2 py-2">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary ring-1 ring-primary/20">
                     {(user?.full_name || user?.email || '?')[0].toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {user?.full_name || user?.email}
+                    <p className="truncate text-sm font-semibold">
+                      {user?.full_name || '—'}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="truncate text-xs text-muted-foreground/70">
                       {user?.email}
                     </p>
                   </div>
                 </div>
-                <Menu.Separator className="my-1 h-px bg-border" />
+                <Menu.Separator className="my-1 h-px bg-border/60" />
                 <Menu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted hover:text-foreground outline-none"
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors outline-none hover:bg-muted hover:text-foreground"
                   onClick={() => navigate(`/${lang}/profile`)}
                 >
                   <User className="size-4" />
                   {t('sidebar.profile')}
                 </Menu.Item>
                 <Menu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted hover:text-foreground outline-none"
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors outline-none hover:bg-muted hover:text-foreground"
                   onClick={() => navigate(`/${lang}/setting`)}
                 >
                   <Settings className="size-4" />
                   {t('sidebar.setting')}
                 </Menu.Item>
-                <Menu.Separator className="my-1 h-px bg-border" />
+                <Menu.Separator className="my-1 h-px bg-border/60" />
                 <Menu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-destructive transition-colors hover:bg-destructive/10 outline-none"
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-destructive transition-colors outline-none hover:bg-destructive/10"
                   onClick={logout}
                 >
                   <LogOut className="size-4" />
