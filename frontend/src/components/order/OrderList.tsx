@@ -88,21 +88,25 @@ export default function OrderList({
       ),
     },
     {
-      key: 'payment',
-      header: t('order.payment'),
+      key: 'paymentMethod',
+      header: t('order.paymentMethod'),
+      className: 'hidden md:table-cell',
+      cell: (order) =>
+        order.payment_method ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase">
+            {t(`paymentMethod.${order.payment_method}`)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'paymentStatus',
+      header: t('order.paymentStatus'),
       className: 'hidden md:table-cell',
       sortable: true,
       sortKey: 'payment_status',
-      cell: (order) => (
-        <div className="flex items-center gap-1.5">
-          {order.payment_method && (
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-              {t(`paymentMethod.${order.payment_method}`)}
-            </span>
-          )}
-          <PaymentBadge status={order.payment_status} />
-        </div>
-      ),
+      cell: (order) => <PaymentBadge status={order.payment_status} />,
     },
     {
       key: 'status',
