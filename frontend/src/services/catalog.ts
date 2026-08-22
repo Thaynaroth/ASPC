@@ -20,8 +20,37 @@ export interface Product {
   match_score?: number;
 }
 
+export interface CategoryListParams {
+  q?: string;
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
+export interface ProductListParams {
+  q?: string;
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  category_id?: string;
+}
+
 export const catalogApi = {
-  listCategories: () => request<{ categories: Category[] }>('/categories'),
+  // Non-paginated when no page/limit given (used for dropdowns); paginated otherwise.
+  listCategories: (params?: CategoryListParams) => {
+    const search = new URLSearchParams();
+    if (params?.q) search.set('q', params.q);
+    if (params?.page) search.set('page', String(params.page));
+    if (params?.limit) search.set('limit', String(params.limit));
+    if (params?.sort) search.set('sort', params.sort);
+    if (params?.order) search.set('order', params.order);
+    const qs = search.toString();
+    return request<{ categories: Category[]; total?: number; page?: number; limit?: number }>(
+      `/categories${qs ? `?${qs}` : ''}`,
+    );
+  },
 
   createCategory: (data: { name: string; description?: string }) =>
     request<{ category: Category }>('/categories', {
@@ -37,6 +66,20 @@ export const catalogApi = {
 
   deleteCategory: (id: string) =>
     request<{ ok: boolean }>(`/categories/${id}`, { method: 'DELETE' }),
+
+  listProducts: (params: ProductListParams) => {
+    const search = new URLSearchParams();
+    if (params.q) search.set('q', params.q);
+    if (params.page) search.set('page', String(params.page));
+    if (params.limit) search.set('limit', String(params.limit));
+    if (params.sort) search.set('sort', params.sort);
+    if (params.order) search.set('order', params.order);
+    if (params.category_id) search.set('category_id', params.category_id);
+    const qs = search.toString();
+    return request<{ products: Product[]; total: number; page: number; limit: number }>(
+      `/products/list${qs ? `?${qs}` : ''}`,
+    );
+  },
 
   searchProducts: (q: string, limit = 8, categoryId?: string) => {
     const params = new URLSearchParams();
@@ -54,9 +97,32 @@ export const catalogApi = {
       body: JSON.stringify({ is_pinned: isPinned }),
     }),
 
-  createProduct: (data: { name: string; price: number; category_id?: string }) =>
+  createProduct: (data: {
+    name: string;
+    price: number;
+    category_id?: string;
+    sku?: string;
+    stock_quantity?: number;
+  }) =>
     request<{ product: Product }>('/products', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  updateProduct: (id: string, data: {
+    name?: string;
+    price?: number;
+    sku?: string;
+    stock_quantity?: number;
+    category_id?: string | null;
+    is_available?: boolean;
+    is_pinned?: boolean;
+  }) =>
+    request<{ product: Product }>(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteProduct: (id: string) =>
+    request<{ ok: boolean }>(`/products/${id}`, { method: 'DELETE' }),
 };

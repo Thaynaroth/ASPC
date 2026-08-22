@@ -8,7 +8,9 @@ import {
 } from '../controllers/category.controller';
 
 export default async function categoryRoutes(app: FastifyInstance) {
-  app.get('/api/categories', { preHandler: requireAuth }, listCategories);
+  app.get<{
+    Querystring: { q?: string; page?: string; limit?: string; sort?: string; order?: string };
+  }>('/api/categories', { preHandler: requireAuth }, listCategories);
   app.post<{ Body: { name?: string; description?: string } }>(
     '/api/categories',
     { preHandler: requireAuth },

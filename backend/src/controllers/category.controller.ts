@@ -1,26 +1,58 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import prisma from '../utils/prisma';
 import { getShopForUser } from '../utils/shop';
+import type { Prisma } from '@prisma/client';
 
-export async function listCategories(request: FastifyRequest, reply: FastifyReply) {
+const CATEGORY_SORTABLE = ['name', 'created_at'] as const;
+type CategorySortField = (typeof CATEGORY_SORTABLE)[number];
+
+export async function listCategories(
+  request: FastifyRequest<{
+    Querystring: { q?: string; page?: string; limit?: string; sort?: string; order?: string };
+  }>,
+  reply: FastifyReply,
+) {
   const shop = await getShopForUser(request, reply);
   if (!shop) return;
 
+  const q = (request.query.q ?? '').trim();
+  const page = Math.max(1, Number(request.query.page) || 1);
+  const limit = Math.min(Math.max(Number(request.query.limit) || 20, 1), 100);
+  const isPaged = request.query.page !== undefined || request.query.limit !== undefined;
+  const sortField: CategorySortField = CATEGORY_SORTABLE.includes(
+    request.query.sort as CategorySortField,
+  )
+    ? (request.query.sort as CategorySortField)
+    : 'name';
+  const sortOrder: 'asc' | 'desc' = request.query.order === 'asc' ? 'asc' : 'desc';
+
+  const where: Prisma.product_typesWhereInput = {
+    shop_id: shop.id,
+    ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
+  };
+
   const categories = await prisma.product_types.findMany({
-    where: { shop_id: shop.id },
+    where,
     include: { _count: { select: { products: true } } },
-    orderBy: [{ name: 'asc' }],
+    orderBy: [{ [sortField]: sortOrder }],
+    ...(isPaged ? { skip: (page - 1) * limit, take: limit } : {}),
   });
 
-  return {
-    categories: categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      description: c.description,
-      created_at: c.created_at,
-      product_count: c._count.products,
-    })),
-  };
+  const serialized = categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    created_at: c.created_at,
+    product_count: c._count.products,
+  }));
+
+  // Non-paginated call (used for dropdowns) keeps the original shape.
+  if (!isPaged) {
+    return { categories: serialized };
+  }
+
+  const total = await prisma.product_types.count({ where });
+  return { categories: serialized, total, page, limit };
 }
 
 export async function createCategory(
