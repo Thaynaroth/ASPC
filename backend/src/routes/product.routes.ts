@@ -6,6 +6,7 @@ import {
   listProducts,
   searchProducts,
   listPinnedProducts,
+  reorderPinned,
   updateProduct,
 } from '../controllers/product.controller';
 
@@ -26,6 +27,11 @@ export default async function productRoutes(app: FastifyInstance) {
     };
   }>('/api/products/list', { preHandler: requireAuth }, listProducts);
   app.get('/api/products/pinned', { preHandler: requireAuth }, listPinnedProducts);
+  app.patch<{ Body: { ids: string[] } }>(
+    '/api/products/pinned/order',
+    { preHandler: requireAuth },
+    reorderPinned,
+  );
   app.patch<{
     Params: { id: string };
     Body: {

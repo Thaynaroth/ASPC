@@ -177,6 +177,30 @@ export async function listPinnedProducts(
   };
 }
 
+export async function reorderPinned(
+  request: FastifyRequest<{
+    Body: { ids: string[] };
+  }>,
+  reply: FastifyReply,
+) {
+  const shop = await getShopForUser(request, reply);
+  if (!shop) return;
+
+  const ids = Array.isArray(request.body?.ids) ? request.body.ids : [];
+  if (ids.length === 0) return { ok: true };
+
+  await prisma.$transaction(
+    ids.map((id, index) =>
+      prisma.products.updateMany({
+        where: { id, shop_id: shop.id, is_pinned: true, deleted_at: null },
+        data: { sort_order: index },
+      }),
+    ),
+  );
+
+  return { ok: true };
+}
+
 export async function updateProduct(
   request: FastifyRequest<{
     Params: { id: string };
@@ -206,7 +230,16 @@ export async function updateProduct(
   const body = request.body ?? {};
   const data: Prisma.productsUpdateInput = {};
 
-  if (typeof body.is_pinned === 'boolean') data.is_pinned = body.is_pinned;
+  if (typeof body.is_pinned === 'boolean') {
+    data.is_pinned = body.is_pinned;
+    if (body.is_pinned) {
+      const last = await prisma.products.aggregate({
+        where: { shop_id: shop.id, is_pinned: true, deleted_at: null },
+        _max: { sort_order: true },
+      });
+      data.sort_order = (last._max.sort_order ?? -1) + 1;
+    }
+  }
 
   if (body.name !== undefined) {
     const name = (body.name ?? '').trim();

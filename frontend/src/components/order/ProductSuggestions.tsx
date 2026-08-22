@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { PackagePlus, Pin, Search } from 'lucide-react';
+import { PackagePlus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/services/catalog';
 import { formatCurrency } from '@/utils/format';
@@ -12,7 +12,6 @@ export default function ProductSuggestions({
   onHover,
   onPick,
   onAddNew,
-  onTogglePin,
 }: {
   query: string;
   suggestions: Product[];
@@ -21,7 +20,6 @@ export default function ProductSuggestions({
   onHover: (index: number) => void;
   onPick: (product: Product) => void;
   onAddNew: () => void;
-  onTogglePin?: (product: Product) => void;
 }) {
   const { t } = useTranslation();
 
@@ -36,7 +34,10 @@ export default function ProductSuggestions({
   }
 
   return (
-    <div className="absolute right-0 left-8 top-full z-20 mt-1 overflow-hidden rounded-lg border-2 border-dashed bg-popover shadow-md">
+    <div
+      className="absolute right-0 left-8 top-full z-20 mt-1 overflow-hidden rounded-lg border-2 border-dashed bg-popover shadow-md"
+      onMouseDown={(e) => e.preventDefault()}
+    >
       {suggestions.map((product, i) => (
         <div
           key={product.id}
@@ -57,26 +58,12 @@ export default function ProductSuggestions({
           <span className="shrink-0 font-semibold tabular-nums">
             {formatCurrency(product.price, 'KHR')}
           </span>
-          {onTogglePin && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePin(product);
-              }}
-              aria-label={product.is_pinned ? t('order.unpin') : t('order.pin')}
-              className={cn(
-                'shrink-0 cursor-pointer rounded-md p-1 transition-colors hover:bg-primary/10 hover:text-primary',
-                product.is_pinned ? 'text-primary' : 'text-muted-foreground',
-              )}
-            >
-              <Pin className={cn('size-3.5', product.is_pinned && 'fill-current')} />
-            </button>
-          )}
         </div>
       ))}
-      {!suggesting && (
+      {!suggesting && query.trim() && (
         <button
           onClick={onAddNew}
+          onMouseDown={(e) => e.preventDefault()}
           className="flex w-full cursor-pointer items-center gap-2 border-t border-dashed px-3 py-2 text-left text-sm text-violet-600 transition-colors hover:bg-muted/60 dark:text-violet-400"
         >
           <PackagePlus className="size-3.5 shrink-0" />

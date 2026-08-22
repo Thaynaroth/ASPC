@@ -97,6 +97,12 @@ export const catalogApi = {
       body: JSON.stringify({ is_pinned: isPinned }),
     }),
 
+  reorderPinned: (ids: string[]) =>
+    request<{ ok: boolean }>(`/products/pinned/order`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ids }),
+    }),
+
   createProduct: (data: {
     name: string;
     price: number;

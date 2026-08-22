@@ -126,6 +126,11 @@
     "noPinnedHint": "Pin products from the search list to show them here.",
     "pin": "Pin",
     "unpin": "Unpin",
+    "addPinned": "Add pinned product",
+    "pinSearchPlaceholder": "Search products to pin…",
+    "noResults": "No products found",
+    "dragToReorder": "Drag to reorder",
+    "allPinnedHint": "All matching products are already pinned.",
     "advanceProcessing": "Start processing",
     "customerDirtyHint": "Customer info changed — will be saved"
   },

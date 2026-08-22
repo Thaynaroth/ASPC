@@ -5,8 +5,6 @@ import {
   Check,
   Landmark,
   Phone,
-  Pin,
-  Plus,
   Printer,
   QrCode,
   Repeat,
@@ -29,6 +27,7 @@ import { getErrorMessage } from '@/services/api';
 import DraftLineRow from './DraftLineRow';
 import ProductSuggestions from './ProductSuggestions';
 import CustomerSuggestions from './CustomerSuggestions';
+import PinnedProducts from './PinnedProducts';
 import { createLine, type DraftLine } from './types';
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; icon: typeof Banknote }> = [
@@ -66,6 +65,7 @@ export default function InvoiceSheet({
   const [suggesting, setSuggesting] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const [striking, setStriking] = useState<Set<string>>(new Set());
+  const [inputFocused, setInputFocused] = useState(false);
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -115,7 +115,6 @@ export default function InvoiceSheet({
     if (!normalized) {
       setSuggestions([]);
       setSuggesting(false);
-      setHighlight(-1);
       return;
     }
     setSuggesting(true);
@@ -134,6 +133,16 @@ export default function InvoiceSheet({
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [query]);
+
+  // pinned products shown when the write-line is empty and focused
+  useEffect(() => {
+    if (!query.trim()) setHighlight(inputFocused && pinned.length ? 0 : -1);
+  }, [query, pinned, inputFocused]);
+
+  const visibleSuggestions = useMemo(
+    () => (query.trim() ? suggestions : inputFocused ? pinned : []),
+    [query, suggestions, pinned, inputFocused],
+  );
 
   const focusWriteLine = useCallback(() => {
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -185,12 +194,12 @@ export default function InvoiceSheet({
 
   const commitQuery = useCallback(async () => {
     const { name, quantity } = parseQtySyntax(query);
-    if (!name) return;
-    if (highlight >= 0 && suggestions[highlight]) {
-      const picked = suggestions[highlight];
+    if (highlight >= 0 && visibleSuggestions[highlight]) {
+      const picked = visibleSuggestions[highlight];
       addLine(picked.name, quantity, picked);
       return;
     }
+    if (!name) return;
     // No suggestions loaded (fast enter before the debounced search answered).
     // Do a blocking check so a known product is never mistyped as new.
     try {
@@ -205,7 +214,7 @@ export default function InvoiceSheet({
     }
     // no match → new product line (qty + price are asked inline)
     addLine(name, quantity);
-  }, [query, highlight, suggestions, addLine]);
+  }, [query, highlight, visibleSuggestions, addLine]);
 
   const removeLine = useCallback((id: string) => {
     setStriking((prev) => new Set(prev).add(id));
@@ -274,17 +283,33 @@ export default function InvoiceSheet({
   const togglePin = useCallback(
     async (product: Product) => {
       const next = !product.is_pinned;
-      setPinned((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, is_pinned: next } : p)),
-      );
+      if (next) {
+        setPinned((prev) => [...prev, { ...product, is_pinned: true }]);
+      } else {
+        setPinned((prev) => prev.filter((p) => p.id !== product.id));
+      }
       try {
         await catalogApi.togglePin(product.id, next);
       } catch {
         void loadPinned();
       }
     },
-    [loadPinned],
+    [],
   );
+
+  const reorderPinned = useCallback(async (orderedIds: string[]) => {
+    setPinned((prev) => {
+      const byId = new Map(prev.map((p) => [p.id, p]));
+      return orderedIds
+        .map((id) => byId.get(id))
+        .filter((p): p is Product => !!p);
+    });
+    try {
+      await catalogApi.reorderPinned(orderedIds);
+    } catch {
+      void loadPinned();
+    }
+  }, [loadPinned]);
 
   // ─── customer search (debounced, stale-safe) ───
   useEffect(() => {
@@ -633,18 +658,22 @@ export default function InvoiceSheet({
                       ref={inputRef}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
+                      onFocus={() => setInputFocused(true)}
+                      onBlur={() => setInputFocused(false)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           void commitQuery();
                         } else if (e.key === 'ArrowDown') {
                           e.preventDefault();
-                          setHighlight((h) => Math.min(suggestions.length - 1, h + 1));
+                          setHighlight((h) => Math.min(visibleSuggestions.length - 1, h + 1));
                         } else if (e.key === 'ArrowUp') {
                           e.preventDefault();
                           setHighlight((h) => Math.max(-1, h - 1));
                         } else if (e.key === 'Escape') {
                           setSuggestions([]);
+                          setHighlight(-1);
+                          inputRef.current?.blur();
                         }
                       }}
                       placeholder={t('order.addItemPlaceholder')}
@@ -659,7 +688,7 @@ export default function InvoiceSheet({
 
                   <ProductSuggestions
                     query={query}
-                    suggestions={suggestions}
+                    suggestions={visibleSuggestions}
                     suggesting={suggesting}
                     highlight={highlight}
                     onHover={setHighlight}
@@ -667,7 +696,6 @@ export default function InvoiceSheet({
                       addLine(product.name, parseQtySyntax(query).quantity, product)
                     }
                     onAddNew={() => void commitQuery()}
-                    onTogglePin={(product) => void togglePin(product)}
                   />
                 </div>
               )}
@@ -864,55 +892,14 @@ export default function InvoiceSheet({
 
           {/* pinned products card */}
           {!placedOrder && (
-            <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-hand text-lg font-bold tracking-tight">
-                  {t('order.pinnedProducts')}
-                </h3>
-                <Pin className="size-4 text-muted-foreground" />
-              </div>
-              <div className="mt-3 flex h-[26rem] flex-col gap-1.5 overflow-y-auto pr-1">
-                {loadingPinned && pinned.length === 0 && (
-                  <p className="text-xs text-muted-foreground">{t('common.loading')}</p>
-                )}
-                {!loadingPinned && pinned.length === 0 && (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
-                    <Pin className="size-5 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">{t('order.noPinnedHint')}</p>
-                  </div>
-                )}
-                {pinned.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-2 rounded-lg border border-dashed/70 bg-background px-2.5 py-1.5 transition-colors hover:bg-muted/40"
-                  >
-                    <button
-                      onClick={() => addLine(p.name, 1, p)}
-                      className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 text-left"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
-                      <span className="shrink-0 text-xs font-semibold tabular-nums">
-                        {formatCurrency(p.price, 'KHR')}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => addLine(p.name, 1, p)}
-                      aria-label={t('order.addProduct')}
-                      className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                    >
-                      <Plus className="size-3.5" />
-                    </button>
-                    <button
-                      onClick={() => void togglePin(p)}
-                      aria-label={t('order.unpin')}
-                      className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-500"
-                    >
-                      <Pin className="size-3.5 fill-current" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PinnedProducts
+              pinned={pinned}
+              loading={loadingPinned}
+              onAddToOrder={(product) => addLine(product.name, 1, product)}
+              onPin={(product) => void togglePin(product)}
+              onUnpin={(product) => void togglePin(product)}
+              onReorder={(orderedIds) => void reorderPinned(orderedIds)}
+            />
           )}
         </aside>
       </div>
