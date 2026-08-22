@@ -482,7 +482,7 @@ export default function InvoiceSheet({
         <div className="w-full">
           <div
             className={cn(
-              'paper-ruled relative rounded-xl border-2 border-dashed bg-card px-6 pt-5 pb-6 shadow-sm sm:px-8',
+              'relative rounded-xl border-2 border-dashed bg-card px-6 pt-5 pb-6 shadow-sm sm:px-8',
               placedOrder && open && 'print-area',
             )}
           >

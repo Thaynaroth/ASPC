@@ -52,6 +52,8 @@
     "confirm": "Confirm",
     "loading": "Loading…",
     "search": "Search",
+    "noResults": "No results found",
+    "endOfList": "You've reached the end",
     "all": "All",
     "today": "Today",
     "last7Days": "Last 7 days",

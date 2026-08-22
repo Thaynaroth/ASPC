@@ -23,6 +23,25 @@ export type PaymentMethodValue = 'khqr' | 'cash' | 'bank_transfer';
 // Client error thrown inside the transaction, mapped to a 400 response.
 class OrderValidationError extends Error {}
 
+// Re-run a transaction if it failed due to a unique-constraint violation on the
+// per-shop daily order_number, which can happen if two orders for the same shop
+// are created in the same instant. Bounded to avoid infinite loops.
+async function retryOnUniqueViolation<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if ((err as { code?: string })?.code === 'P2002' && i < attempts - 1) {
+        lastErr = err;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 export interface CreateOrderBody {
   items?: Array<{
     name?: string;
@@ -47,7 +66,21 @@ export interface ListOrdersQuery {
   to?: string;
   page?: string;
   limit?: string;
+  sort?: string;
+  order?: string;
 }
+
+const SORTABLE_FIELDS = [
+  'created_at',
+  'updated_at',
+  'total_amount',
+  'customer_name',
+  'status',
+  'payment_status',
+  'order_number',
+] as const;
+
+type SortableField = (typeof SORTABLE_FIELDS)[number];
 
 const orderInclude = {
   order_items: true,
@@ -103,6 +136,44 @@ async function upsertCustomerByPhone(
   });
 }
 
+// Cambodia runs on Asia/Phnom_Penh (UTC+7, no DST). The "today" used for the
+// order-number date part and daily sequence is the shop's local calendar day.
+const SHOP_TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function localDateParts(now: Date) {
+  const shifted = new Date(now.getTime() + SHOP_TZ_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth();
+  const day = shifted.getUTCDate();
+  return { year, month, day };
+}
+
+// Lower/upper bound (UTC instants) of the shop's current local calendar day.
+function localDayRange(now: Date) {
+  const { year, month, day } = localDateParts(now);
+  const localMidnight = Date.UTC(year, month, day, 0, 0, 0, 0);
+  const start = new Date(localMidnight - SHOP_TZ_OFFSET_MS);
+  const end = new Date(localMidnight + 24 * 60 * 60 * 1000 - SHOP_TZ_OFFSET_MS);
+  return { start, end };
+}
+
+// Build the next order number for a shop on the given local day, e.g. 20260822-001.
+// The sequence counts how many orders the shop already has today and increments.
+async function nextOrderNumber(
+  tx: Prisma.TransactionClient,
+  shopId: string,
+  now: Date,
+): Promise<string> {
+  const { year, month, day } = localDateParts(now);
+  const { start, end } = localDayRange(now);
+  const todaysCount = await tx.orders.count({
+    where: { shop_id: shopId, created_at: { gte: start, lt: end } },
+  });
+  const datePart = `${year}${String(month + 1).padStart(2, '0')}${String(day).padStart(2, '0')}`;
+  const seq = String(todaysCount + 1).padStart(3, '0');
+  return `${datePart}-${seq}`;
+}
+
 export async function createOrder(
   request: FastifyRequest<{ Body: CreateOrderBody }>,
   reply: FastifyReply,
@@ -147,7 +218,9 @@ export async function createOrder(
 
   let result: OrderWithDetails;
   try {
-    result = await prisma.$transaction(async (tx) => {
+    // Retry on a rare unique-violation race for the per-shop daily order_number.
+    result = await retryOnUniqueViolation(() =>
+      prisma.$transaction(async (tx) => {
     for (const raw of rawItems) {
       const name = (raw.name ?? '').trim();
       const quantity = Math.max(1, Math.floor(Number(raw.quantity) || 1));
@@ -225,9 +298,12 @@ export async function createOrder(
         ? 'paid'
         : 'pending';
 
+    const orderNumber = await nextOrderNumber(tx, shop.id, new Date());
+
     const order = await tx.orders.create({
       data: {
         shop_id: shop.id,
+        order_number: orderNumber,
         customer_name: (body.customer_name ?? '').trim() || null,
         customer_phone: (body.customer_phone ?? '').trim() || null,
         customer_address: (body.customer_address ?? '').trim() || null,
@@ -274,7 +350,8 @@ export async function createOrder(
     }
 
     return order;
-  });
+  }),
+    );
   } catch (err) {
     if (err instanceof OrderValidationError) {
       return reply.status(400).send({ error: err.message });
@@ -295,10 +372,15 @@ export async function listOrders(
   const shop = await getShopForUser(request, reply);
   if (!shop) return;
 
-  const { status, q, from, to } = request.query;
+  const { status, q, from, to, sort, order } = request.query;
   const page = Math.max(1, Number(request.query.page) || 1);
   const limit = Math.min(Math.max(Number(request.query.limit) || 20, 1), 100);
   const query = (q ?? '').trim();
+
+  const sortField: SortableField = SORTABLE_FIELDS.includes(sort as SortableField)
+    ? (sort as SortableField)
+    : 'created_at';
+  const sortOrder: 'asc' | 'desc' = order === 'asc' ? 'asc' : 'desc';
 
   const where: Prisma.ordersWhereInput = {
     shop_id: shop.id,
@@ -315,21 +397,22 @@ export async function listOrders(
       : {}),
   };
 
-  if (query) {
-    const idMatches = await findOrderIdsByShortNumber(shop.id, query);
-    where.OR = [
-      { customer_name: { contains: query, mode: 'insensitive' } },
-      { customer_phone: { contains: query, mode: 'insensitive' } },
-      ...(idMatches.length ? [{ id: { in: idMatches } }] : []),
-      { order_items: { some: { product_name: { contains: query, mode: 'insensitive' } } } },
-    ];
-  }
+    if (query) {
+      const idMatches = await findOrderIdsByShortNumber(shop.id, query);
+      where.OR = [
+        { customer_name: { contains: query, mode: 'insensitive' } },
+        { customer_phone: { contains: query, mode: 'insensitive' } },
+        { order_number: { contains: query } },
+        ...(idMatches.length ? [{ id: { in: idMatches } }] : []),
+        { order_items: { some: { product_name: { contains: query, mode: 'insensitive' } } } },
+      ];
+    }
 
   const [orders, total] = await prisma.$transaction([
     prisma.orders.findMany({
       where,
       include: orderInclude,
-      orderBy: { created_at: 'desc' },
+      orderBy: { [sortField]: sortOrder },
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -454,7 +537,7 @@ export async function markOrderPaid(
 function serializeOrder(order: OrderWithDetails, shopName: string) {
   return {
     id: order.id,
-    number: `#${order.id.slice(0, 6).toUpperCase()}`,
+    number: order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 6).toUpperCase()}`,
     shop_name: shopName,
     customer_name: order.customer_name,
     customer_phone: order.customer_phone,

@@ -84,6 +84,8 @@ export const orderApi = {
     to?: string;
     page?: number;
     limit?: number;
+    sort?: string;
+    order?: 'asc' | 'desc';
   }) => {
     const search = new URLSearchParams();
     if (params.status && params.status !== 'all') search.set('status', params.status);
@@ -92,6 +94,8 @@ export const orderApi = {
     if (params.to) search.set('to', params.to);
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
+    if (params.sort) search.set('sort', params.sort);
+    if (params.order) search.set('order', params.order);
     const qs = search.toString();
     return request<OrderListResponse>(`/orders${qs ? `?${qs}` : ''}`);
   },
