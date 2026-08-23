@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth';
 import {
   createOrder,
   getOrder,
+  getPublicOrder,
   listOrders,
   markOrderPaid,
   updateOrderStatus,
@@ -14,6 +15,11 @@ import type {
 } from '../controllers/order.controller';
 
 export default async function orderRoutes(app: FastifyInstance) {
+  // Public, shareable order view — no authentication required.
+  app.get<{ Params: { shopId: string; orderId: string } }>(
+    '/api/public/orders/:shopId/:orderId',
+    getPublicOrder,
+  );
   app.get<{ Querystring: ListOrdersQuery }>('/api/orders', { preHandler: requireAuth }, listOrders);
   app.post<{ Body: CreateOrderBody }>('/api/orders', { preHandler: requireAuth }, createOrder);
   app.get<{ Params: { id: string } }>('/api/orders/:id', { preHandler: requireAuth }, getOrder);

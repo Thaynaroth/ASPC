@@ -158,7 +158,7 @@ export default function CategoryPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
         <div>
           <h1 className="font-hand text-3xl leading-snug font-bold tracking-tight">
             {t('category.title')}

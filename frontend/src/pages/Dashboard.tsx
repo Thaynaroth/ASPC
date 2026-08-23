@@ -36,7 +36,7 @@ export default function Dashboard() {
   }).format(new Date());
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto p-6">
+    <div className="flex h-full flex-col gap-6 overflow-y-auto px-5 py-6">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="font-hand text-3xl leading-snug font-bold tracking-tight">

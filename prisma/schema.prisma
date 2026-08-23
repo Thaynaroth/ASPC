@@ -41,6 +41,11 @@ enum Language {
   en
 }
 
+enum Theme {
+  light
+  dark
+}
+
 enum PlacedVia {
   bot
   pos
@@ -136,6 +141,7 @@ model user_preferences {
   id                 String   @id @default(uuid()) @db.Uuid
   user_id            String   @unique @db.Uuid
   language           Language @default(km)
+  theme              Theme    @default(light)
   timezone           String   @default("Asia/Phnom_Penh")
   notify_new_order   Boolean  @default(true)
   notify_low_stock   Boolean  @default(true)
@@ -190,9 +196,10 @@ model shops {
   cover_url   String?
   phone       String?
   address     String?
-  city        String?   @default("Phnom Penh")
-  currency    String    @default("KHR")
-  is_active   Boolean   @default(true)
+  city          String    @default("Phnom Penh")
+  currency      String    @default("KHR")
+  exchange_rate Decimal   @default(4000) @db.Decimal(12, 2)
+  is_active     Boolean   @default(true)
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
   deleted_at  DateTime?

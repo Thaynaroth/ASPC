@@ -10,7 +10,9 @@ import OrderPage from '@/pages/OrderPage';
 import CategoryPage from '@/pages/CategoryPage';
 import ProductPage from '@/pages/ProductPage';
 import CustomerPage from '@/pages/CustomerPage';
+import SettingPage from '@/pages/SettingPage';
 import PlaceholderPage from '@/pages/PlaceholderPage';
+import PublicOrderPage from '@/pages/PublicOrderPage';
 
 function GuestRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -36,6 +38,9 @@ export default function App() {
               }
             />
 
+            {/* Public, shareable, no-auth order view: /{shopId}/{orderId} */}
+            <Route path="/:shopId/:orderId" element={<PublicOrderPage />} />
+
             <Route
               path="/:lang"
               element={
@@ -56,7 +61,7 @@ export default function App() {
               <Route path="customer" element={<CustomerPage />} />
               <Route path="shop" element={<PlaceholderPage title="Shop" />} />
               <Route path="user" element={<PlaceholderPage title="User" />} />
-              <Route path="setting" element={<PlaceholderPage title="Setting" />} />
+              <Route path="setting" element={<SettingPage />} />
               <Route path="profile" element={<PlaceholderPage title="Profile" />} />
             </Route>
           </Routes>

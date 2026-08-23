@@ -24,6 +24,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  shop_id: string;
   number: string;
   shop_name: string;
   customer_name: string | null;
@@ -101,6 +102,9 @@ export const orderApi = {
   },
 
   get: (id: string) => request<{ order: Order }>(`/orders/${id}`),
+
+  getPublic: (shopId: string, orderId: string) =>
+    request<{ order: Order }>(`/public/orders/${shopId}/${orderId}`),
 
   create: (data: CreateOrderInput) =>
     request<{ order: Order; new_products: number }>('/orders', {

@@ -459,6 +459,31 @@ export async function getOrder(
   return { order: serializeOrder(order, shop.name) };
 }
 
+// Public, unauthenticated access used by the shareable /{shopId}/{orderId} link.
+// Only returns the order when both the shop and order UUIDs match.
+export async function getPublicOrder(
+  request: FastifyRequest<{ Params: { shopId: string; orderId: string } }>,
+  reply: FastifyReply,
+) {
+  const shop = await prisma.shops.findFirst({
+    where: { id: request.params.shopId, is_active: true, deleted_at: null },
+    select: { id: true, name: true, currency: true },
+  });
+  if (!shop) {
+    return reply.status(404).send({ error: 'Shop not found' });
+  }
+
+  const order = await prisma.orders.findFirst({
+    where: { id: request.params.orderId, shop_id: shop.id },
+    include: orderInclude,
+  });
+  if (!order) {
+    return reply.status(404).send({ error: 'Order not found' });
+  }
+
+  return { order: serializeOrder(order, shop.name) };
+}
+
 export async function updateOrderStatus(
   request: FastifyRequest<{
     Params: { id: string };
@@ -537,6 +562,7 @@ export async function markOrderPaid(
 function serializeOrder(order: OrderWithDetails, shopName: string) {
   return {
     id: order.id,
+    shop_id: order.shop_id,
     number: order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 6).toUpperCase()}`,
     shop_name: shopName,
     customer_name: order.customer_name,

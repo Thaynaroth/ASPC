@@ -6,6 +6,7 @@ export interface ShopContext {
   name: string;
   slug: string;
   currency: string;
+  exchange_rate: string;
   role: string;
 }
 
@@ -16,7 +17,7 @@ export async function getShopForUser(
   const membership = await prisma.user_roles.findFirst({
     where: { user_id: request.user.sub, shop_id: { not: null } },
     include: {
-      shop: { select: { id: true, name: true, slug: true, currency: true } },
+      shop: { select: { id: true, name: true, slug: true, currency: true, exchange_rate: true } },
       role: { select: { name: true } },
     },
     orderBy: { assigned_at: 'asc' },
@@ -32,6 +33,7 @@ export async function getShopForUser(
     name: membership.shop!.name,
     slug: membership.shop!.slug,
     currency: membership.shop!.currency,
+    exchange_rate: membership.shop!.exchange_rate.toString(),
     role: membership.role.name,
   };
 }
