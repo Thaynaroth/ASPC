@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { StatusBadge, PaymentBadge } from '@/components/common/StatusBadge';
 import type { Order } from '@/services/orders';
 import { formatCurrency, formatDateTime } from '@/utils/format';
 
@@ -28,6 +27,15 @@ export default function OrderInvoice({
         <div>
           <h4 className="font-hand text-2xl leading-tight font-bold">{t('order.invoice')}</h4>
           <p className="text-sm font-semibold">{order.shop_name}</p>
+          <p className="mt-1 text-xs font-bold tracking-wide uppercase">
+            <span className="text-foreground">{t(`orderStatus.${order.status}`)}</span>
+            {order.payment_status && (
+              <span className="text-muted-foreground">
+                {' '}
+                · {t(`paymentStatus.${order.payment_status}`)}
+              </span>
+            )}
+          </p>
         </div>
         <div className="text-right text-xs text-muted-foreground">
           <p>{formatDateTime(order.created_at, lang)}</p>
@@ -128,19 +136,6 @@ export default function OrderInvoice({
           {order.cancel_reason}
         </p>
       )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-1.5">
-        <StatusBadge status={order.status} />
-        <PaymentBadge status={order.payment_status} />
-        {order.payment_method && (
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
-            {t(`paymentMethod.${order.payment_method}`)}
-          </span>
-        )}
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
-          {t(`placedVia.${order.placed_via}`)}
-        </span>
-      </div>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/context/AuthContext';
 import { orderApi } from '@/services/orders';
 import { cn } from '@/lib/utils';
+import pkg from '../../../package.json';
 import {
   BarChart3,
   FileText,
@@ -14,7 +14,6 @@ import {
   Package,
   LayoutGrid,
   Users,
-  Store,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -56,7 +55,6 @@ const sectionLabelClass =
 export default function AppSidebar() {
   const { t } = useTranslation();
   const { lang } = useParams<{ lang: string }>();
-  const { user } = useAuth();
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -78,33 +76,16 @@ export default function AppSidebar() {
     };
   }, [location.pathname]);
 
-  const shop = user?.shops?.[0];
-
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+      'group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
       isActive
-        ? 'text-foreground'
-        : 'text-muted-foreground/80 hover:text-foreground',
+        ? 'bg-muted text-foreground'
+        : 'text-muted-foreground/80 hover:bg-muted/50 hover:text-foreground',
     );
 
   return (
     <aside className="flex h-full w-60 flex-col">
-      {/* Current shop (non-superadmin users) */}
-      {shop && (
-        <div className="flex items-center gap-2.5 px-5 pt-5 pb-2">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400">
-            <Store className="size-3.5" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-xs font-semibold leading-tight">{shop.name}</p>
-            <p className="truncate text-[10px] leading-tight text-muted-foreground/70">
-              {shop.role}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {sections.map((section, index) => (
@@ -130,9 +111,6 @@ export default function AppSidebar() {
                           {pendingCount > 99 ? '99+' : pendingCount}
                         </span>
                       )}
-                      {isActive && (
-                        <span className="absolute top-1/2 left-0 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
-                      )}
                     </>
                   )}
                 </NavLink>
@@ -141,6 +119,13 @@ export default function AppSidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Bottom — version */}
+      <div className="shrink-0 px-3 py-3">
+        <p className="px-3 text-[10px] font-medium text-muted-foreground/50">
+          ASPC v{pkg.version}
+        </p>
+      </div>
     </aside>
   );
 }

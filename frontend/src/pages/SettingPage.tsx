@@ -358,9 +358,6 @@ export default function SettingPage() {
                           {settings.currency}
                         </span>
                       )}
-                      {active && (
-                        <span className="absolute top-1/2 left-0 hidden h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary lg:block" />
-                      )}
                     </button>
                   );
                 })}

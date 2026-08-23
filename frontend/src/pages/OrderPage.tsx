@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import InvoiceSheet from '@/components/order/InvoiceSheet';
 import OrderList from '@/components/order/OrderList';
@@ -10,9 +10,17 @@ import type { Order } from '@/services/orders';
 export default function OrderPage() {
   const { t } = useTranslation();
   const { lang } = useParams<{ lang: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selected, setSelected] = useState<Order | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setInvoiceOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   return (
     <div className="flex h-full flex-col">
